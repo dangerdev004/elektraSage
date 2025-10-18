@@ -1,0 +1,248 @@
+.sidebar {
+  background: var(--panel-bg, #1e1e1e);
+  color: var(--panel-fg, #ddd);
+  padding: 12px;
+  border-right: 1px solid #333;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 220px;
+  flex: 0 0 220px;
+  box-sizing: border-box;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.sidebar h3, .sidebar h4 {
+  margin: 4px 0;
+  font-size: 15px;
+  text-align: center;
+}
+
+.sidebar .group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar .buttons button {
+  text-align: left;
+}
+
+.sidebar button {
+  background: #2c2c2c;
+  color: #ddd;
+  border: 1px solid #444;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+.sidebar button:hover {
+  background: #3a3a3a;
+}
+
+/* Button Panel */
+.button-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-button {
+  padding: 8px 12px;
+  border: 1px solid #444;
+  background-color: #2c2c2c;
+  color: #ddd;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.control-button:hover {
+  background-color: #3a3a3a;
+}
+
+.control-button.stop {
+  background-color: #4a2020;
+  color: #ff6b6b;
+}
+
+.control-button.stop strong {
+  color: #ff6b6b;
+}
+
+.control-button.run strong {
+  color: #6bff6b;
+}
+
+/* Control Groups */
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-label {
+  display: block;
+  font-size: 12px;
+  color: var(--panel-fg, #ddd);
+}
+
+.control-label.disabled {
+  color: #666;
+}
+
+/* Sliders */
+.slider {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  background: #444;
+}
+
+.slider:hover {
+  opacity: 1;
+}
+
+.slider:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Circuit Info */
+.circuit-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-label {
+  display: block;
+  font-size: 11px;
+  color: #999;
+}
+
+.circuit-title {
+  font-size: 12px;
+  color: var(--panel-fg, #ddd);
+  word-wrap: break-word;
+  padding: 4px;
+  background: #2c2c2c;
+  border: 1px solid #444;
+  border-radius: 3px;
+}
+
+/* File Input */
+.file-input {
+  width: 100%;
+  font-size: 11px;
+  padding: 6px;
+  border: 1px solid #444;
+  border-radius: 3px;
+  background: #2c2c2c;
+  color: #ddd;
+  cursor: pointer;
+}
+
+.file-input:hover {
+  background: #3a3a3a;
+}
+
+/* Info Frame */
+.info-frame {
+  border: 1px solid #444;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.circuit-iframe {
+  width: 100%;
+  height: 100px;
+  border: none;
+  background: #2c2c2c;
+}
+
+/* Light theme overrides */
+.light .sidebar {
+  background: #f4f4f4;
+  color: #222;
+  border-right: 1px solid #ccc;
+}
+
+.light .sidebar button {
+  background: #fff;
+  color: #222;
+  border: 1px solid #bbb;
+}
+
+.light .sidebar button:hover {
+  background: #eaeaea;
+}
+
+.light .control-button {
+  background-color: #fff;
+  color: #222;
+  border: 1px solid #bbb;
+}
+
+.light .control-button:hover {
+  background-color: #eaeaea;
+}
+
+.light .control-button.stop {
+  background-color: #ffe0e0;
+  color: #d32f2f;
+}
+
+.light .control-button.stop strong {
+  color: #d32f2f;
+}
+
+.light .control-button.run strong {
+  color: #2e7d32;
+}
+
+.light .slider {
+  background: #ccc;
+}
+
+.light .circuit-title {
+  background: #fff;
+  border: 1px solid #bbb;
+  color: #222;
+}
+
+.light .file-input {
+  background: #fff;
+  border: 1px solid #bbb;
+  color: #222;
+}
+
+.light .file-input:hover {
+  background: #eaeaea;
+}
+
+.light .circuit-iframe {
+  background: #fff;
+}
+
+.light .info-frame {
+  border: 1px solid #bbb;
+}
+
+.light .control-label {
+  color: #222;
+}
+
+.light .control-label.disabled {
+  color: #999;
+}
+
+.light .info-label {
+  color: #666;
+}
