@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useEffect ,useState } from "react";
 import "./App.css";
 import Toolbar from "./components/Toolbar";
 import CircuitCanvas from "./components/CircuitCanvas";
@@ -10,6 +10,36 @@ function App() {
   const [smallGrid, setSmallGrid] = useState(false);
   const [dots, setDots] = useState([]);
 
+  const [simulationTime, setSimulationTime] = useState(0);
+  const [simRunning, setSimRunning] = useState(false);
+  const [speedValue, setSpeedValue] = useState(117);
+  const [currentValue, setCurrentValue] = useState(50);
+  const [powerValue, setPowerValue] = useState(50);
+  const [circuitTitle, setCircuitTitle] = useState("Untitled Circuit");
+  const animationFrameId = useRef(null);
+
+  useEffect(() => {
+    const runSimulation = () => {
+      const timeStep = 5e-6;
+      setSimulationTime((prevTime) => prevTime + timeStep);
+        animationFrameId.current = requestAnimationFrame(runSimulation);
+      };
+      if (simRunning) {
+        animationFrameId.current = requestAnimationFrame(runSimulation);
+      } else {
+          cancelAnimationFrame(animationFrameId.current);
+      }
+      return () => { 
+        cancelAnimationFrame(animationFrameId.current);
+      };
+  }, [simRunning]);
+
+  const handleReset = () => {
+    setSimulationTime(0);
+    // Additional reset logic can be added here
+    console.log("Circuit simulation reset to t = 0");
+  }
+ 
   const fileInputRef = React.useRef(null);
 
   // open file handler
@@ -137,7 +167,19 @@ function App() {
             onAddDot={(dot) => setDots([...dots, dot])}
           />
       </div>
-      <Sidebar/>
+      <Sidebar
+        simRunning={simRunning}
+        onToggleSimulation={() => setSimRunning(!simRunning)}
+        onReset={handleReset}
+        speedValue={speedValue}
+        onSpeedChange={setSpeedValue}
+        currentValue={currentValue}
+        onCurrentChange={setCurrentValue}
+        powerValue={powerValue}
+        onPowerChange={setPowerValue}
+        circuitTitle={circuitTitle}
+        powerBarEnabled={true /* We can control this later */}
+      />
     </div>
   </div>
   );
