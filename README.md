@@ -1,5 +1,27 @@
 # CircuitJS1
 
+## 📚 Comprehensive Documentation Available
+
+**New!** Complete documentation for understanding and recreating this simulator:
+
+### Quick Links
+- 🚀 **[QUICK_START_GUIDE.md](./QUICK_START_GUIDE.md)** - Build a working simulator in ReactJS in 1 hour
+- 📖 **[DOCUMENTATION_INDEX.md](./DOCUMENTATION_INDEX.md)** - Complete guide to all documentation
+- 🏗️ **[SIMULATOR_ARCHITECTURE.md](./SIMULATOR_ARCHITECTURE.md)** - Deep dive into architecture and algorithms
+- ⚛️ **[REACTJS_IMPLEMENTATION_GUIDE.md](./REACTJS_IMPLEMENTATION_GUIDE.md)** - Production-ready React code
+- 🔧 **[ADVANCED_COMPONENTS_GUIDE.md](./ADVANCED_COMPONENTS_GUIDE.md)** - Diodes, transistors, logic gates, op-amps
+
+These guides explain:
+- ✅ How the simulator works (Modified Nodal Analysis)
+- ✅ Complete pseudocode for all algorithms
+- ✅ How to recreate in ReactJS/modern JavaScript
+- ✅ Production-ready TypeScript implementations
+- ✅ Step-by-step tutorials from beginner to expert
+
+**[Start with the Documentation Index →](./DOCUMENTATION_INDEX.md)**
+
+---
+
 ## Introduction
 
 CircuitJS1 is an electronic circuit simulator that runs in the browser. It was originally written by Paul Falstad as a Java Applet. It was adapted by Iain Sharp to run in the browser using GWT.
