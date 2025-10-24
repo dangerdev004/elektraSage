@@ -1,0 +1,175 @@
+Turning off precompile in incremental mode.
+Super Dev Mode starting up
+   workDir: /tmp/gwt-codeserver-778506698943461074.tmp
+   Loading Java files in com.lushprojects.circuitjs1.circuitjs1.
+   Ignored 80 units with compilation errors in first pass.
+Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
+   Module setup completed in 8920 ms
+
+The code server is ready at http://172.31.229.32:9876/
+GET /recompile/circuitjs1
+   Job com.lushprojects.circuitjs1.circuitjs1_1_0
+      starting job: com.lushprojects.circuitjs1.circuitjs1_1_0
+      binding: user.agent=safari
+      Compiling module com.lushprojects.circuitjs1.circuitjs1
+         Ignored 80 units with compilation errors in first pass.
+Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
+         Computing all possible rebind results for 'com.google.gwt.useragent.client.UserAgentAsserter'
+            Rebinding com.google.gwt.useragent.client.UserAgentAsserter
+               Checking rule <generate-with class='com.google.gwt.editor.rebind.SimpleBeanEditorDriverGenerator'/>
+                  [WARN] Detected warnings related to 'com.google.gwt.editor.client.SimpleBeanEditorDriver'.   Are validation-api-<version>.jar and validation-api-<version>-sources.jar on the classpath?
+                  Specify -logLevel DEBUG to see all errors.
+                  [WARN] Unknown type 'com.google.gwt.editor.client.SimpleBeanEditorDriver' specified in deferred binding rule
+         Unification traversed 28909 fields and methods and 2371 types. 2337 are considered part of the current module and 2337 had all of their fields and methods traversed.
+         Warnings in com/google/gwt/emul/java/util/Arrays.java
+            [WARN] Line 1782: [unusable-by-js] Type of parameter 'd1' in 'int Arrays.1methodref$compare$Type.compare(long, long)' is not usable by but exposed to JavaScript.
+            [WARN] Line 1782: [unusable-by-js] Type of parameter 'd2' in 'int Arrays.1methodref$compare$Type.compare(long, long)' is not usable by but exposed to JavaScript.
+         [WARN] Suppress "[unusable-by-js]" warnings by adding a `@SuppressWarnings("unusable-by-js")` annotation to the corresponding member.
+         Compiling 1 permutation
+            Compiling permutation 0...
+            Linking per-type JS with 2316 new/changed types.
+            Source Maps Enabled
+         Compile of permutations succeeded
+         Compilation succeeded -- 6.002s
+      Linking into /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-2/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-2/extras/circuitjs1
+         Link succeeded
+         Linking succeeded -- 0.328s
+      6.408s total -- Compile completed
+GET /recompile/circuitjs1
+   Job com.lushprojects.circuitjs1.circuitjs1_1_1
+      starting job: com.lushprojects.circuitjs1.circuitjs1_1_1
+      binding: user.agent=safari
+      skipped compile because no input files have changed
+      0.034s total -- Compile completed
+GET /recompile/circuitjs1
+   Job com.lushprojects.circuitjs1.circuitjs1_1_2
+      starting job: com.lushprojects.circuitjs1.circuitjs1_1_2
+      binding: user.agent=safari
+      Compiling module com.lushprojects.circuitjs1.circuitjs1
+         Ignored 80 units with compilation errors in first pass.
+Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
+         Unification traversed 2479 fields and methods and 1078 types. 2 are considered part of the current module and 13 had all of their fields and methods traversed.
+         Compiling 1 permutation
+            Compiling permutation 0...
+            Linking per-type JS with 2 new/changed types.
+            Source Maps Enabled
+         Compile of permutations succeeded
+         Compilation succeeded -- 1.430s
+      Linking into /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-4/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-4/extras/circuitjs1
+         Link succeeded
+         Linking succeeded -- 0.177s
+      1.716s total -- Compile completed
+GET /recompile/circuitjs1
+   Job com.lushprojects.circuitjs1.circuitjs1_1_3
+      starting job: com.lushprojects.circuitjs1.circuitjs1_1_3
+      binding: user.agent=safari
+      Compiling module com.lushprojects.circuitjs1.circuitjs1
+         Ignored 81 units with compilation errors in first pass.
+Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
+         [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
+            [ERROR] Line 57: The constructor ChipElm(int, int, int, int, int, StringTokenizer) is undefined
+         Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.ArduinoElm'
+            [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
+               [ERROR] Line 57: The constructor ChipElm(int, int, int, int, int, StringTokenizer) is undefined
+         [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
+         Unification traversed 2409 fields and methods and 1071 types. 1 are considered part of the current module and 12 had all of their fields and methods traversed.
+         [WARN] Some stale types ([com.lushprojects.circuitjs1.client.ArduinoElm]) were not reprocessed as was expected. This is either a compiler bug or a Generator has legitimately stopped creating these types.
+      [ERROR] Compiler returned false
+      [WARN] recompile failed
+      [WARN] continuing to serve previous version
+GET /recompile/circuitjs1
+   Job com.lushprojects.circuitjs1.circuitjs1_1_4
+      starting job: com.lushprojects.circuitjs1.circuitjs1_1_4
+      binding: user.agent=safari
+      Compiling module com.lushprojects.circuitjs1.circuitjs1
+         Ignored 80 units with compilation errors in first pass.
+Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
+         Unification traversed 2479 fields and methods and 1078 types. 2 are considered part of the current module and 13 had all of their fields and methods traversed.
+         Compiling 1 permutation
+            Compiling permutation 0...
+            Linking per-type JS with 2 new/changed types.
+            Source Maps Enabled
+         Compile of permutations succeeded
+         Compilation succeeded -- 1.144s
+      Linking into /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-6/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-6/extras/circuitjs1
+         Link succeeded
+         Linking succeeded -- 0.109s
+      1.361s total -- Compile completed
+GET /recompile/circuitjs1
+   Job com.lushprojects.circuitjs1.circuitjs1_1_5
+      starting job: com.lushprojects.circuitjs1.circuitjs1_1_5
+      binding: user.agent=safari
+      Compiling module com.lushprojects.circuitjs1.circuitjs1
+         Ignored 81 units with compilation errors in first pass.
+Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
+         [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
+            [ERROR] Line 56: The constructor ChipElm(int, int, int, int, int, StringTokenizer) is undefined
+         Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.ArduinoElm'
+            [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
+               [ERROR] Line 56: The constructor ChipElm(int, int, int, int, int, StringTokenizer) is undefined
+         [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
+         Unification traversed 2409 fields and methods and 1071 types. 1 are considered part of the current module and 12 had all of their fields and methods traversed.
+         [WARN] Some stale types ([com.lushprojects.circuitjs1.client.ArduinoElm]) were not reprocessed as was expected. This is either a compiler bug or a Generator has legitimately stopped creating these types.
+      [ERROR] Compiler returned false
+      [WARN] recompile failed
+      [WARN] continuing to serve previous version
+GET /recompile/circuitjs1
+   Job com.lushprojects.circuitjs1.circuitjs1_1_6
+      starting job: com.lushprojects.circuitjs1.circuitjs1_1_6
+      binding: user.agent=safari
+      Compiling module com.lushprojects.circuitjs1.circuitjs1
+         Ignored 81 units with compilation errors in first pass.
+Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
+         [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
+            [ERROR] Line 56: The constructor ChipElm(int, int, int, int, int, StringTokenizer) is undefined
+         Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.ArduinoElm'
+            [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
+               [ERROR] Line 56: The constructor ChipElm(int, int, int, int, int, StringTokenizer) is undefined
+         [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
+         Unification traversed 4583 fields and methods and 1192 types. 76 are considered part of the current module and 88 had all of their fields and methods traversed.
+         [WARN] Some stale types ([com.lushprojects.circuitjs1.client.ArduinoElm]) were not reprocessed as was expected. This is either a compiler bug or a Generator has legitimately stopped creating these types.
+      [ERROR] Compiler returned false
+      [WARN] recompile failed
+      [WARN] continuing to serve previous version
+GET /recompile/circuitjs1
+   Job com.lushprojects.circuitjs1.circuitjs1_1_7
+      starting job: com.lushprojects.circuitjs1.circuitjs1_1_7
+      binding: user.agent=safari
+      Compiling module com.lushprojects.circuitjs1.circuitjs1
+         Ignored 80 units with compilation errors in first pass.
+Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
+         Unification traversed 4619 fields and methods and 1193 types. 77 are considered part of the current module and 89 had all of their fields and methods traversed.
+         Compiling 1 permutation
+            Compiling permutation 0...
+            Linking per-type JS with 77 new/changed types.
+            Source Maps Enabled
+         Compile of permutations succeeded
+         Compilation succeeded -- 1.386s
+      Linking into /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-9/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-9/extras/circuitjs1
+         Link succeeded
+         Linking succeeded -- 0.108s
+      1.584s total -- Compile completed
+GET /recompile/circuitjs1
+   Job com.lushprojects.circuitjs1.circuitjs1_1_8
+      starting job: com.lushprojects.circuitjs1.circuitjs1_1_8
+      binding: user.agent=safari
+      Compiling module com.lushprojects.circuitjs1.circuitjs1
+         Ignored 80 units with compilation errors in first pass.
+Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
+         Unification traversed 2497 fields and methods and 1072 types. 2 are considered part of the current module and 13 had all of their fields and methods traversed.
+         Compiling 1 permutation
+            Compiling permutation 0...
+            Linking per-type JS with 2 new/changed types.
+            Source Maps Enabled
+         Compile of permutations succeeded
+         Compilation succeeded -- 2.055s
+      Linking into /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-10/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-10/extras/circuitjs1
+         Link succeeded
+         Linking succeeded -- 0.228s
+      2.436s total -- Compile completed
+GET /recompile/circuitjs1
+   Job com.lushprojects.circuitjs1.circuitjs1_1_9
+      starting job: com.lushprojects.circuitjs1.circuitjs1_1_9
+      binding: user.agent=safari
+      skipped compile because no input files have changed
+      0.035s total -- Compile completed
