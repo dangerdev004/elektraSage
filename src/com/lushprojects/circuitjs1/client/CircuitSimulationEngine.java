@@ -31,6 +31,13 @@ import java.util.Vector;
  * - Timestep management and convergence
  * - Node voltage calculations
  * - Wire current computations
+ * 
+ * Note: This is the initial separation of simulation logic from CirSim.java. Some minor
+ * dependencies on CirSim still exist (e.g., CirSim.console() for logging, access to 
+ * shared state). Future improvements could include:
+ * - Implementing a proper logging interface instead of CirSim.console()
+ * - Using dependency injection for shared state
+ * - Creating formal interfaces between layers
  */
 public class CircuitSimulationEngine {
     

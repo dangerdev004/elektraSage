@@ -214,15 +214,26 @@ void stampCircuit() {
 - Easier to profile and optimize
 - Can add caching or memoization strategies
 
+## Known Limitations
+
+This is the initial separation of simulation logic from the UI layer. Some minor dependencies remain:
+
+1. **Logging**: CircuitSimulationEngine uses `CirSim.console()` static methods for debug logging
+2. **Shared State**: Some state is still synchronized between layers (nodeList, elmList)
+3. **Debugging**: Uses `CirSim.debugger()` for development debugging
+
+These are acceptable trade-offs for the initial refactoring and maintain backward compatibility.
+
 ## Future Enhancements
 
 Potential improvements to this architecture:
 
-1. **Further Separation**: Extract more simulation logic from CirSim into the engine
-2. **Interface Definition**: Define formal interfaces between layers
-3. **Event System**: Use events/callbacks instead of direct coupling
-4. **State Management**: More sophisticated state synchronization
-5. **Modular UI Components**: Break down CirSim UI into smaller components
+1. **Logging Interface**: Replace `CirSim.console()` calls with a proper logging abstraction
+2. **Further Separation**: Extract more simulation logic from CirSim into the engine
+3. **Interface Definition**: Define formal interfaces between layers
+4. **Event System**: Use events/callbacks instead of direct coupling
+5. **State Management**: More sophisticated state synchronization using dependency injection
+6. **Modular UI Components**: Break down CirSim UI into smaller components
 
 ## Migration Guide
 
