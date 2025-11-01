@@ -1,5 +1,14 @@
 # CircuitJS1
 
+## 🎉 Recent Architectural Improvements
+
+**NEW!** The codebase has been refactored to separate UI and simulation concerns:
+- 🔧 **CircuitSimulationEngine.java** - Pure simulation logic (matrix operations, circuit analysis)
+- 🎨 **CirSim.java** - UI/UX layer (mouse handlers, menus, rendering)
+- 📖 **[ARCHITECTURE_SEGREGATION.md](./ARCHITECTURE_SEGREGATION.md)** - Complete architectural documentation
+
+This separation improves maintainability, testability, and makes the simulation engine reusable in different contexts.
+
 ## 📚 Comprehensive Documentation Available
 
 **New!** Complete documentation for understanding and recreating this simulator:
@@ -8,8 +17,9 @@
 - 🚀 **[QUICK_START_GUIDE.md](./QUICK_START_GUIDE.md)** - Build a working simulator in ReactJS in 1 hour
 - 📖 **[DOCUMENTATION_INDEX.md](./DOCUMENTATION_INDEX.md)** - Complete guide to all documentation
 - 🏗️ **[SIMULATOR_ARCHITECTURE.md](./SIMULATOR_ARCHITECTURE.md)** - Deep dive into architecture and algorithms
+- 🔧 **[ARCHITECTURE_SEGREGATION.md](./ARCHITECTURE_SEGREGATION.md)** - UI/Simulation separation architecture
 - ⚛️ **[REACTJS_IMPLEMENTATION_GUIDE.md](./REACTJS_IMPLEMENTATION_GUIDE.md)** - Production-ready React code
-- 🔧 **[ADVANCED_COMPONENTS_GUIDE.md](./ADVANCED_COMPONENTS_GUIDE.md)** - Diodes, transistors, logic gates, op-amps
+- 🔩 **[ADVANCED_COMPONENTS_GUIDE.md](./ADVANCED_COMPONENTS_GUIDE.md)** - Diodes, transistors, logic gates, op-amps
 
 These guides explain:
 - ✅ How the simulator works (Modified Nodal Analysis)
