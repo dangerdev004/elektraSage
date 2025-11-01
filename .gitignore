@@ -1,0 +1,26 @@
+# Gradle
+.gradle/
+build/
+
+# GWT
+war/WEB-INF/classes
+war/WEB-INF/lib
+gwt-unitCache/
+www-test/
+.gwt-tmp/
+
+# IDE
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+# Build artifacts
+site/
+target/
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
