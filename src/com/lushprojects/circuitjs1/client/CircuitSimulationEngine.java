@@ -34,6 +34,9 @@ import java.util.Vector;
  */
 public class CircuitSimulationEngine {
     
+    // Maximum number of voltage sources supported in the circuit
+    private static final int MAX_VOLTAGE_SOURCES = 400;
+    
     // Reference to the parent CirSim for accessing shared state
     private CirSim sim;
     
@@ -83,7 +86,7 @@ public class CircuitSimulationEngine {
      */
     public CircuitSimulationEngine(CirSim sim) {
         this.sim = sim;
-        this.voltageSources = new CircuitElm[400];
+        this.voltageSources = new CircuitElm[MAX_VOLTAGE_SOURCES];
     }
     
     /**
@@ -187,9 +190,7 @@ public class CircuitSimulationEngine {
     public void stampResistor(int n1, int n2, double r) {
         double r0 = 1 / r;
         if (Double.isNaN(r0) || Double.isInfinite(r0)) {
-            System.out.print("bad resistance " + r + " " + r0 + "\n");
-            int a = 0;
-            a /= a;
+            throw new IllegalArgumentException("Invalid resistance value: " + r + " (conductance: " + r0 + ")");
         }
         stampMatrix(n1, n1, r0);
         stampMatrix(n2, n2, r0);
@@ -240,8 +241,14 @@ public class CircuitSimulationEngine {
      * (Unless i or j is a voltage source node.)
      */
     public void stampMatrix(int i, int j, double x) {
-        if (Double.isInfinite(x))
-            CirSim.debugger();
+        if (Double.isInfinite(x)) {
+            // Log for debugging - in production this would use a proper logger
+            System.err.println("Warning: Infinite value in matrix at position [" + i + "," + j + "]");
+            // Optionally trigger debugger if available
+            if (sim != null) {
+                CirSim.debugger();
+            }
+        }
         if (i > 0 && j > 0) {
             if (circuitNeedsMap) {
                 i = circuitRowInfo[i - 1].mapRow;
