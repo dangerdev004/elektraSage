@@ -1,4 +1,4 @@
-import React, { useRef, useEffect ,useState, use } from "react";
+import React, { useRef, useEffect ,useState } from "react";
 import "./App.css";
 import Toolbar from "./components/Toolbar";
 import CircuitCanvas from "./components/CircuitCanvas";
@@ -11,6 +11,10 @@ import CircuitSimulator from './engine/CircuitSimulator';
 
 function App() {
   const [showGrid, setShowGrid] = useState(false);
+  const [dragMode, setDragMode] = useState(null); // 'ELEMENT' or 'POST'
+  const [dragItem, setDragItem] = useState(null); // The element being dragged
+  const [dragPostIndex, setDragPostIndex] = useState(-1); // If dragging a specific post
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [theme, setTheme] = useState("dark");
   const [smallGrid, setSmallGrid] = useState(false);
   const [elements, setElements] = useState([]);
@@ -40,12 +44,11 @@ function App() {
       if (sim.current && sim.current.elmList.length > 0) {
         
         // Run one simulation step
-        sim.current.doTimeStep();
         
         // Force a re-render to update the canvas
         // This is NOT efficient, but it's the simplest way to show updates
         // We will optimize this later if needed.
-        setElements(prev => [...prev]); 
+        sim.current.doTimeStep();
         setSimulationTime(sim.current.time);
       }
         animationFrameId.current = requestAnimationFrame(runSimulation);
@@ -91,6 +94,81 @@ function App() {
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleCanvasMouseDown = (x, y) => {
+      // 1. Check for clicks on Posts (nodes) first (prioritize node dragging)
+      for (const elm of elements) {
+          const post = elm.getPostAt(x, y);
+          if (post !== -1) {
+              setDragMode('POST');
+              setDragItem(elm);
+              setDragPostIndex(post);
+              setSimRunning(false); // Pause while dragging to avoid instability
+              return;
+          }
+      }
+
+      // 2. Check for clicks on Element bodies
+      let bestDist = 20; // Hit threshold
+      let bestElm = null;
+      for (const elm of elements) {
+          const dist = elm.getMouseDistance(x, y);
+          if (dist < bestDist) {
+              bestDist = dist;
+              bestElm = elm;
+          }
+      }
+
+      if (bestElm) {
+          setDragMode('ELEMENT');
+          setDragItem(bestElm);
+          setDragStart({ x, y });
+          setSimRunning(false);
+          // Select it visually
+          elements.forEach(e => e.selected = (e === bestElm));
+      } else {
+          // Clicked empty space, deselect all
+          elements.forEach(e => e.selected = false);
+      }
+  };
+
+  // NEW: Mouse Move Handler
+  const handleCanvasMouseMove = (x, y) => {
+      if (!dragItem) return;
+
+      // Very basic snapping to 10px grid
+      const snapX = Math.round(x / 10) * 10;
+      const snapY = Math.round(y / 10) * 10;
+
+      if (dragMode === 'POST') {
+          // Move just one end of the element
+          if (dragPostIndex === 0) { dragItem.x1 = snapX; dragItem.y1 = snapY; }
+          else if (dragPostIndex === 1) { dragItem.x2 = snapX; dragItem.y2 = snapY; }
+      } else if (dragMode === 'ELEMENT') {
+          // Move the whole element relative to start
+          const dx = snapX - Math.round(dragStart.x / 10) * 10;
+          const dy = snapY - Math.round(dragStart.y / 10) * 10;
+          
+          if (dx !== 0 || dy !== 0) {
+              dragItem.x1 += dx; dragItem.y1 += dy;
+              dragItem.x2 += dx; dragItem.y2 += dy;
+              // Reset drag start to current snap to avoid accumulating drift
+              setDragStart({ x: snapX, y: snapY });
+          }
+      }
+  };
+
+  // NEW: Mouse Up Handler
+  const handleCanvasMouseUp = () => {
+      if (dragItem) {
+          // Circuit topology changed, we MUST re-analyze
+          sim.current.analyzeCircuit();
+          setSimRunning(true); // Resume simulation
+      }
+      setDragMode(null);
+      setDragItem(null);
+      setDragPostIndex(-1);
   };
 
   const saveAs = () => {
@@ -197,6 +275,9 @@ function App() {
             theme={theme}
             smallGrid={smallGrid}
             elements={elements}
+            onMouseDown={handleCanvasMouseDown}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseUp={handleCanvasMouseUp}
             onAddElement={(element) => setElements([...elements, element])}
           />
       </div>

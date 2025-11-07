@@ -1,114 +1,144 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 
-function CircuitCanvas({ showGrid, theme, smallGrid, elements = [] }) {
+function CircuitCanvas({ showGrid, theme, smallGrid, elements = [], onMouseDown, onMouseMove, onMouseUp }) {
   const canvasRef = useRef(null);
+  const animationRef = useRef(null);
+  const lastTimeRef = useRef(0);
+
   const gridSize = smallGrid ? 10 : 20;
-
+  // eslint-disable-next-line no-unused-vars
   const [transform, setTransform] = useState([0, 0, 1]);
-  // eslint-disable-next-line no-unused-vars
-  const [circuitArea, setCircuitArea] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  // eslint-disable-next-line no-unused-vars
-  const [mouseMode, setMouseMode] = useState("SELECT");
-  // eslint-disable-next-line no-unused-vars
-  const [mouseDragging, setMouseDragging] = useState(false);
-  // eslint-disable-next-line no-unused-vars
-  const [dragElm, setDragElm] = useState(null);
-  // eslint-disable-next-line no-unused-vars
-  const [initDragX, setInitDragX] = useState(0);
-  // eslint-disable-next-line no-unused-vars
-  const [initDragY, setInitDragY] = useState(0);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-
-    // Set context properties
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-
-    function resizeCanvas() {
-      const rect = canvas.parentElement.getBoundingClientRect();
+  // --- DRAW FUNCTION ---
+  // Wrapped in useCallback so we can access latest props/state without stale closures,
+  // though for 'elements' array we rely on its mutable nature.
+  const draw = useCallback((ctx, canvas, dt) => {
       const dpr = window.devicePixelRatio || 1;
+      const width = canvas.width / dpr;
+      const height = canvas.height / dpr;
 
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-      canvas.style.width = rect.width + "px";
-      canvas.style.height = rect.height + "px";
-
-      ctx.scale(dpr, dpr);
-
-      setCircuitArea({ x: 0, y: 0, width: rect.width, height: rect.height });
-      draw();
-    }
-
-    function draw() {
-      const dpr = window.devicePixelRatio || 1;
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+      // Clear background
       ctx.fillStyle = theme === "dark" ? "#000000" : "#ffffff";
-      ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+      ctx.fillRect(0, 0, width, height);
 
+      // Draw Grid
       if (showGrid) {
         ctx.strokeStyle = theme === "dark" ? "#555" : "#ccc";
         ctx.lineWidth = 0.5;
-
-        for (let x = 0; x < canvas.width / dpr; x += gridSize) {
-          ctx.beginPath();
+        ctx.beginPath();
+        for (let x = 0; x < width; x += gridSize) {
           ctx.moveTo(x, 0);
-          ctx.lineTo(x, canvas.height / dpr);
-          ctx.stroke();
+          ctx.lineTo(x, height);
         }
-        for (let y = 0; y < canvas.height / dpr; y += gridSize) {
-          ctx.beginPath();
+        for (let y = 0; y < height; y += gridSize) {
           ctx.moveTo(0, y);
-          ctx.lineTo(canvas.width / dpr, y);
-          ctx.stroke();
+          ctx.lineTo(width, y);
         }
+        ctx.stroke();
       }
 
-      // Safe loop over elements
-      (elements || []).forEach((elm) => {
-        if (elm?.draw) {
-          elm.draw(ctx);
-        } else if (elm?.x !== undefined && elm?.y !== undefined) {
-          // Fallback for simple dots (from clicks)
-          ctx.fillStyle = theme === "dark" ? "yellow" : "red";
-          ctx.beginPath();
-          ctx.arc(elm.x, elm.y, 4, 0, 2 * Math.PI);
-          ctx.fill();
-        }
-      });
+      // Draw Elements
+      // We trust that 'elements' is mutable and being updated by App.js sim loop
+      if (elements) {
+         // 1. Standard Draw Pass
+         elements.forEach((elm) => {
+            if (elm?.draw) elm.draw(ctx);
+         });
+         
+         // 2. Current Dot Pass
+         // dt is in milliseconds. Adjust scaler to taste for dot speed.
+         const curScale = 0.5 * (1000 / 60);
+         
+         elements.forEach((elm) => {
+             if (elm?.drawDots) {
+                 elm.updateDotCount(curScale);
+                 elm.drawDots(ctx);
+             }
+         });
+      }
 
       ctx.restore();
-    }
+  }, [showGrid, theme, gridSize, elements]); // Dependencies for draw configuration
 
-    function handleClick(event) {
-      const rect = canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
+  // --- MAIN RENDER LOOP ---
+  useEffect(() => {
+      const render = (time) => {
+          // Calculate delta time for smooth animation regardless of FPS
+          const dt = time - lastTimeRef.current;
+          lastTimeRef.current = time;
+          
+          const canvas = canvasRef.current;
+          if (canvas) {
+               const ctx = canvas.getContext("2d");
+               draw(ctx, canvas, dt);
+          }
+          
+          animationRef.current = requestAnimationFrame(render);
+      };
 
-      const snappedX = Math.round(x / gridSize) * gridSize;
-      const snappedY = Math.round(y / gridSize) * gridSize;
+      // Start the loop
+      animationRef.current = requestAnimationFrame(render);
 
-    }
+      return () => {
+          if (animationRef.current) {
+              cancelAnimationFrame(animationRef.current);
+          }
+      };
+  }, [draw]); // Re-start loop if draw function (and its dependencies) change
+
+  // --- RESIZE HANDLING ---
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const resizeCanvas = () => {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      
+      if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+          canvas.width = rect.width * dpr;
+          canvas.height = rect.height * dpr;
+          canvas.style.width = rect.width + "px";
+          canvas.style.height = rect.height + "px";
+      }
+    };
 
     const ro = new ResizeObserver(resizeCanvas);
     ro.observe(canvas.parentElement);
-    window.addEventListener("resize", resizeCanvas);
-    canvas.addEventListener("click", handleClick);
+    resizeCanvas(); // Initial size
 
-    resizeCanvas();
+    return () => ro.disconnect();
+  }, []);
 
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", resizeCanvas);
-      canvas.removeEventListener("click", handleClick);
-    };
-  }, [showGrid, theme, smallGrid, gridSize, elements, transform]);
+  // --- EVENT COORDINATE NORMALIZER ---
+  const getCanvasCoordinates = (event) => {
+      const rect = canvasRef.current.getBoundingClientRect();
+      return { 
+          x: event.clientX - rect.left, 
+          y: event.clientY - rect.top 
+      };
+  };
 
-  return <canvas ref={canvasRef} style={{ display: "block" }} />;
+  return (
+    <canvas 
+       ref={canvasRef} 
+       style={{ display: "block" }}
+       onMouseDown={(e) => {
+           const {x, y} = getCanvasCoordinates(e);
+           onMouseDown(x, y);
+       }}
+       onMouseMove={(e) => {
+           const {x, y} = getCanvasCoordinates(e);
+           onMouseMove(x, y);
+       }}
+       onMouseUp={(e) => {
+           onMouseUp();
+       }}
+    />
+  );
 }
 
 export default CircuitCanvas;
