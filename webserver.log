@@ -1,71 +1,176 @@
-172.31.229.32 - - [08/Nov/2025 13:52:05] "GET /circuitjs.html HTTP/1.1" 304 -
-172.31.229.32 - - [08/Nov/2025 13:52:05] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 13:52:05] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 13:52:06] "GET /service-worker.js HTTP/1.1" 304 -
-172.31.229.32 - - [08/Nov/2025 13:52:06] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 13:52:06] "GET /circuit/manifest.json HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 13:52:06] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 13:52:06] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 13:52:06] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 13:52:06] "GET /circuit/circuitjs.html HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 13:52:06] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 13:52:06] "GET /circuit/about.html HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 13:56:51] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-172.31.229.32 - - [08/Nov/2025 13:56:51] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
-172.31.229.32 - - [08/Nov/2025 13:56:51] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-172.31.229.32 - - [08/Nov/2025 14:01:02] "GET /circuitjs.html HTTP/1.1" 304 -
-172.31.229.32 - - [08/Nov/2025 14:01:02] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:01:02] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:01:02] "GET /service-worker.js HTTP/1.1" 304 -
-172.31.229.32 - - [08/Nov/2025 14:01:03] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:01:03] "GET /circuit/manifest.json HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:01:03] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:01:03] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:01:03] "GET /circuit/about.html HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:01:03] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:01:03] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:01:03] "GET /circuit/circuitjs.html HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:03:21] "GET /circuitjs.html HTTP/1.1" 304 -
-172.31.229.32 - - [08/Nov/2025 14:03:21] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:03:21] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:03:21] "GET /service-worker.js HTTP/1.1" 304 -
-172.31.229.32 - - [08/Nov/2025 14:03:22] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:03:22] "GET /circuit/manifest.json HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:03:22] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:03:22] "GET /circuit/about.html HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:03:22] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:03:22] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:03:22] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:03:22] "GET /circuit/circuitjs.html HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:03:24] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-172.31.229.32 - - [08/Nov/2025 14:03:24] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-172.31.229.32 - - [08/Nov/2025 14:03:24] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
-172.31.229.32 - - [08/Nov/2025 14:03:35] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
-172.31.229.32 - - [08/Nov/2025 14:06:39] "GET /circuitjs.html HTTP/1.1" 304 -
-172.31.229.32 - - [08/Nov/2025 14:06:39] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:06:39] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:06:39] "GET /service-worker.js HTTP/1.1" 304 -
-172.31.229.32 - - [08/Nov/2025 14:06:40] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:06:40] "GET /circuit/about.html HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:06:40] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:06:40] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:06:40] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:06:40] "GET /circuit/circuitjs.html HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:06:40] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:06:40] "GET /circuit/manifest.json HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:08:27] "GET /circuitjs.html HTTP/1.1" 304 -
-172.31.229.32 - - [08/Nov/2025 14:08:27] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:08:27] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:08:27] "GET /service-worker.js HTTP/1.1" 304 -
-172.31.229.32 - - [08/Nov/2025 14:08:27] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:08:27] "GET /circuit/manifest.json HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:08:28] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:08:28] "GET /circuit/about.html HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:08:28] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:08:28] "GET /circuit/circuitjs.html HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:08:28] code 404, message File not found
-172.31.229.32 - - [08/Nov/2025 14:08:28] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
-172.31.229.32 - - [08/Nov/2025 14:08:29] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-172.31.229.32 - - [08/Nov/2025 14:08:30] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-172.31.229.32 - - [08/Nov/2025 14:08:30] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
-172.31.229.32 - - [08/Nov/2025 14:29:39] "GET /circuitjs1/circuits/555lowduty.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 17:14:46] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 17:14:46] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:14:46] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:14:46] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 17:14:46] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 17:14:47] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:14:47] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:14:47] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:14:47] "GET /circuit/about.html HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:14:47] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:14:47] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:14:47] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:14:47] "GET /circuit/circuitjs.html HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:14:51] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 17:14:51] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:14:51] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:14:51] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:14:51] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:14:51] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 17:14:52] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:14:52] "GET /circuit/circuitjs.html HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:14:53] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 17:14:53] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:14:53] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:14:53] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 17:14:53] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:14:53] "GET /circuit/about.html HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:14:53] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:14:53] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:15:00] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 17:15:00] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:15:00] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:15:00] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:15:00] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:15:00] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 17:15:00] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:15:00] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:15:00] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:15:00] "GET /circuit/circuitjs.html HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:15:00] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 17:15:00] "GET /circuit/about.html HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 17:15:08] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 17:15:08] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 17:15:09] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 17:15:16] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:25:05] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 18:25:05] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:25:05] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:25:05] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:25:05] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 18:25:06] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:25:06] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:25:06] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:25:06] "GET /circuit/about.html HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:25:20] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:25:21] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:25:21] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:25:58] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 18:25:58] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:25:58] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:25:58] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:25:58] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:25:59] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 18:25:59] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:25:59] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:26:04] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:26:04] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:26:04] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:26:07] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:29:54] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 18:29:54] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:29:54] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:29:54] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 18:29:55] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:29:55] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:29:55] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:29:55] "GET /circuit/about.html HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:29:55] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:29:55] "GET /circuit/circuitjs.html HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:29:55] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:29:55] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:30:00] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:30:00] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:30:00] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:32:09] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 18:32:09] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:32:09] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:32:09] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:32:09] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:32:09] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:32:09] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 18:32:09] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:32:09] "GET /circuit/about.html HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:32:13] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:32:13] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:32:13] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:33:28] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 18:33:28] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:33:28] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:33:29] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:33:29] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:33:29] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:33:29] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 18:33:29] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:33:29] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:33:32] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:33:32] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:33:32] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:34:25] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 18:34:26] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:34:26] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:34:26] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:34:26] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:34:26] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:34:26] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 18:34:26] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:34:26] "GET /circuit/about.html HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:34:29] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:34:29] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:34:29] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:35:17] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 18:35:18] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:35:18] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:35:18] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:35:18] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:35:18] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:35:18] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 18:35:18] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 18:35:18] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 18:35:21] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:35:21] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 18:35:21] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 19:47:24] "GET /circuitjs1/circuits/moscurrentsrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 19:47:29] "GET /circuitjs1/circuits/mosfetamp.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 19:56:42] "GET /circuitjs1/circuits/mux3state.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 20:14:42] "GET /circuitjs1/circuits/mux.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 20:14:52] "GET /circuitjs1/circuits/samplenhold.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 20:17:59] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 20:17:59] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 20:17:59] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 20:17:59] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 20:17:59] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 20:17:59] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 20:17:59] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 20:18:00] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 20:18:00] "GET /circuit/about.html HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 20:18:01] "GET /circuitjs1/setuplist.txt HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 20:18:01] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 20:18:01] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 20:30:58] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 20:30:59] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 20:30:59] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 20:30:59] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 20:30:59] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 20:30:59] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 20:30:59] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 20:30:59] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 20:30:59] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 20:31:08] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 20:31:08] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 20:31:08] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 20:34:55] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 20:34:55] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 20:34:55] "GET /src/com/lushprojects/circuitjs1/public/js/avr8js.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 20:34:55] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [08/Nov/2025 20:34:55] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 20:34:55] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 20:34:55] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 20:34:55] "GET /circuit/circuitjs.html HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 20:34:55] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 20:34:55] "GET /circuit/about.html HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 20:34:55] code 404, message File not found
+172.31.229.32 - - [08/Nov/2025 20:34:55] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
+172.31.229.32 - - [08/Nov/2025 20:45:35] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 20:45:35] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 20:45:35] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -

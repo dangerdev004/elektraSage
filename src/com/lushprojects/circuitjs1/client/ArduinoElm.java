@@ -1,9 +1,5 @@
 package com.lushprojects.circuitjs1.client;
 
-import com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS;
-import com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS.AVRRunner;
-import com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS.PortListener;
-import com.lushprojects.circuitjs1.client.Microcontrollers.HexParser;
 import com.google.gwt.typedarrays.shared.Uint8Array;
 import com.google.gwt.user.client.ui.Button;
 
@@ -41,16 +37,6 @@ class ArduinoElm extends ChipElm {
     boolean[] pinStates = new boolean[20];
     int[] analogValues = new int[6]; // 10-bit ADC (0-1023)
     
-    // AVR8JS core
-    private AVRRunner avrRunner = null;
-    private boolean isRunning = false;
-    private double lastSimTime = 0;
-    private static final double CPU_FREQ = 16000000.0; // 16 MHz
-    
-    // Port listeners
-    private PortListener portBListener;
-    private PortListener portCListener;
-    private PortListener portDListener;
     
     // Serial output buffer
     private StringBuilder serialBuffer = new StringBuilder();
@@ -72,39 +58,40 @@ class ArduinoElm extends ChipElm {
     String getChipName() { return "Arduino Uno"; }
     
     void setupPins() {
-        sizeX = 8;  // Wider to look more like Arduino board
-        sizeY = 14; // Taller to accommodate all pins
+        sizeX = 7;  // Width - adjusted for better proportions
+        sizeY = 14; // Height - taller to fit all digital pins on right side
         pins = new Pin[22];
         
-        // Left side - Digital pins D0-D7
-        pins[N_D0] = new Pin(1, SIDE_W, "D0");
-        pins[N_D1] = new Pin(2, SIDE_W, "D1");
-        pins[N_D2] = new Pin(3, SIDE_W, "D2");
-        pins[N_D3] = new Pin(4, SIDE_W, "~D3");
-        pins[N_D4] = new Pin(5, SIDE_W, "D4");
-        pins[N_D5] = new Pin(6, SIDE_W, "~D5");
-        pins[N_D6] = new Pin(7, SIDE_W, "~D6");
-        pins[N_D7] = new Pin(8, SIDE_W, "D7");
+        // TOP - Power supply (5V)
+        pins[N_VCC] = new Pin(3, SIDE_N, "5V");
         
-        // Right side - Digital pins D8-D13
-        pins[N_D8] = new Pin(1, SIDE_E, "D8");
-        pins[N_D9] = new Pin(2, SIDE_E, "~D9");
-        pins[N_D10] = new Pin(3, SIDE_E, "~D10");
-        pins[N_D11] = new Pin(4, SIDE_E, "~D11");
-        pins[N_D12] = new Pin(5, SIDE_E, "D12");
-        pins[N_D13] = new Pin(6, SIDE_E, "D13");
+        // BOTTOM - Ground (GND)
+        pins[N_GND] = new Pin(3, SIDE_S, "GND");
         
-        // Bottom - Analog pins
-        pins[N_A0] = new Pin(1, SIDE_S, "A0");
-        pins[N_A1] = new Pin(2, SIDE_S, "A1");
-        pins[N_A2] = new Pin(3, SIDE_S, "A2");
-        pins[N_A3] = new Pin(4, SIDE_S, "A3");
-        pins[N_A4] = new Pin(5, SIDE_S, "A4");
-        pins[N_A5] = new Pin(6, SIDE_S, "A5");
+        // LEFT SIDE - Analog pins A0-A5
+        pins[N_A0] = new Pin(6, SIDE_W, "A0");
+        pins[N_A1] = new Pin(7, SIDE_W, "A1");
+        pins[N_A2] = new Pin(8, SIDE_W, "A2");
+        pins[N_A3] = new Pin(9, SIDE_W, "A3");
+        pins[N_A4] = new Pin(10, SIDE_W, "A4");
+        pins[N_A5] = new Pin(11, SIDE_W, "A5");
         
-        // Top - Power
-        pins[N_VCC] = new Pin(2, SIDE_N, "5V");
-        pins[N_GND] = new Pin(4, SIDE_N, "GND");
+        // RIGHT SIDE - Digital pins D13 down to D0 (RX/TX)
+        // From top to bottom: D13, D12, D11, D10, D9, D8, D7, D6, D5, D4, D3, D2, TX(D1), RX(D0)
+        pins[N_D13] = new Pin(0, SIDE_E, "13");
+        pins[N_D12] = new Pin(1, SIDE_E, "12");
+        pins[N_D11] = new Pin(2, SIDE_E, "11");
+        pins[N_D10] = new Pin(3, SIDE_E, "10");
+        pins[N_D9] = new Pin(4, SIDE_E, "~9");
+        pins[N_D8] = new Pin(5, SIDE_E, "8");
+        pins[N_D7] = new Pin(6, SIDE_E, "7");
+        pins[N_D6] = new Pin(7, SIDE_E, "~6");
+        pins[N_D5] = new Pin(8, SIDE_E, "~5");
+        pins[N_D4] = new Pin(9, SIDE_E, "4");
+        pins[N_D3] = new Pin(10, SIDE_E, "~3");
+        pins[N_D2] = new Pin(11, SIDE_E, "2");
+        pins[N_D1] = new Pin(12, SIDE_E, "(TX)1");
+        pins[N_D0] = new Pin(13, SIDE_E, "(RX)0");
     }
     
     boolean nonLinear() { return true; }
@@ -159,25 +146,6 @@ class ArduinoElm extends ChipElm {
             analogValues[i] = (int)((voltage / vcc) * 1023); // 10-bit ADC
         }
         
-        // Execute AVR if running
-        if (isRunning && avrRunner != null) {
-            double currentTime = sim.t;
-            double elapsedTime = currentTime - lastSimTime;
-            lastSimTime = currentTime;
-            
-            // Execute CPU cycles
-            double cycles = elapsedTime * CPU_FREQ;
-            if (cycles > 0) {
-                try {
-                    avrRunner.execute(cycles);
-                } catch (Exception e) {
-                    console("AVR execution error: " + e.getMessage());
-                }
-            }
-            
-            // Feed analog values to AVR ADC
-            feedAnalogToAVR();
-        }
     }
     
     void doStep() {
@@ -202,198 +170,19 @@ class ArduinoElm extends ChipElm {
         }
     }
     
-    // ===== AVR8JS INTEGRATION =====
     
-    /**
-     * Load Arduino hex file and start AVR emulation
-     */
-    public void loadHexFile(String hexContent) {
-        try {
-            console("Loading Arduino hex file...");
-            
-            // Parse hex file to binary
-            Uint8Array program = HexParser.parseHex(hexContent);
-            
-            // Create AVR runner
-            avrRunner = new AVRRunner(program);
-            isRunning = true;
-            lastSimTime = sim.t;
-            
-            // Setup UART callback for Serial output
-            avrRunner.getUsart().setOnByteTransmit(new AVR8JS.ByteTransmitCallback() {
-                public void onByte(int byteValue) {
-                    char c = (char) byteValue;
-                    serialBuffer.append(c);
-                    console("Serial: " + c);
-                }
-            });
-            
-            // Setup Port B listener (D8-D13, mapped to bits 0-5 of Port B)
-            portBListener = new PortListener() {
-                public void onChange(int value, int oldValue) {
-                    // Port B bits 0-5 = Arduino D8-D13
-                    for (int i = 0; i < 6; i++) {
-                        pinStates[8 + i] = ((value >> i) & 1) == 1;
-                    }
-                }
-            };
-            avrRunner.getPortB().addListener(portBListener);
-            
-            // Setup Port C listener (A0-A5, can be used as digital)
-            portCListener = new PortListener() {
-                public void onChange(int value, int oldValue) {
-                    // Port C bits 0-5 = Arduino A0-A5 (pins 14-19)
-                    for (int i = 0; i < 6; i++) {
-                        pinStates[14 + i] = ((value >> i) & 1) == 1;
-                    }
-                }
-            };
-            avrRunner.getPortC().addListener(portCListener);
-            
-            // Setup Port D listener (D0-D7)
-            portDListener = new PortListener() {
-                public void onChange(int value, int oldValue) {
-                    // Port D = Arduino D0-D7
-                    for (int i = 0; i < 8; i++) {
-                        pinStates[i] = ((value >> i) & 1) == 1;
-                    }
-                }
-            };
-            avrRunner.getPortD().addListener(portDListener);
-            
-            console("Arduino program loaded successfully!");
-            console("AVR is now running at 16MHz");
-            
-        } catch (Exception e) {
-            console("Error loading hex file: " + e.getMessage());
-            isRunning = false;
-        }
-    }
-    
-    /**
-     * Feed analog values from circuit to AVR ADC registers
-     */
-    private void feedAnalogToAVR() {
-        if (avrRunner == null) return;
-        
-        // TODO: Write analog values to AVR ADC registers
-        // This requires writing to specific memory addresses in the AVR
-        // For now, the AVR reads whatever is in its ADC registers
-    }
-    
-    /**
-     * Stop AVR execution
-     */
-    public void stopAVR() {
-        if (avrRunner != null) {
-            try {
-                avrRunner.stop();
-            } catch (Exception e) {
-                console("Error stopping AVR: " + e.getMessage());
-            }
-        }
-        isRunning = false;
-        console("AVR stopped");
-    }
-    
-    /**
-     * Reset AVR (stop and clear)
-     */
-    public void resetAVR() {
-        stopAVR();
-        avrRunner = null;
-        serialBuffer.setLength(0);
-        for (int i = 0; i < 20; i++) {
-            pinStates[i] = false;
-        }
-        console("AVR reset");
-    }
-    
-    /**
-     * Check if AVR is running
-     */
-    public boolean isRunning() {
-        return isRunning && avrRunner != null;
-    }
-    
-    /**
-     * Get serial monitor output
-     */
-    public String getSerialOutput() {
-        return serialBuffer.toString();
-    }
-    
-    /**
-     * Clear serial buffer
-     */
-    public void clearSerialOutput() {
-        serialBuffer.setLength(0);
-    }
-    
-    /**
-     * Console logging
-     */
-    private native void console(String message) /*-{
-        console.log("[Arduino] " + message);
-    }-*/;
     
     // ===== UI INTEGRATION =====
     
     @Override
     public void getInfo(String[] arr) {
         arr[0] = "Arduino Uno (ATmega328P)";
-        arr[1] = "Status: " + (isRunning ? "Running" : "Stopped");
-        arr[2] = "CPU: 16 MHz AVR";
-        arr[3] = "VCC = " + getVoltageText(vcc);
-        arr[4] = "Serial buffer: " + serialBuffer.length() + " bytes";
-        if (isRunning) {
-            arr[5] = "Click 'Edit' to view serial monitor";
-        } else {
-            arr[5] = "Click 'Edit' to load hex file";
-        }
+        arr[1] = "CPU: 16 MHz AVR";
+        arr[2] = "VCC = " + getVoltageText(vcc);
+        arr[3] = "Serial buffer: " + serialBuffer.length() + " bytes";
     }
     
-    @Override
-    public EditInfo getEditInfo(int n) {
-        if (n == 0) {
-            EditInfo ei = new EditInfo("", 0, -1, -1);
-            ei.button = new Button("Load Arduino Hex File");
-            return ei;
-        }
-        if (n == 1) {
-            EditInfo ei = new EditInfo("", 0, -1, -1);
-            ei.button = new Button("View Serial Monitor");
-            return ei;
-        }
-        if (n == 2 && isRunning) {
-            EditInfo ei = new EditInfo("", 0, -1, -1);
-            ei.button = new Button("Stop AVR");
-            return ei;
-        }
-        if (n == 3 && isRunning) {
-            EditInfo ei = new EditInfo("", 0, -1, -1);
-            ei.button = new Button("Reset AVR");
-            return ei;
-        }
-        return null;
-    }
-    
-    @Override
-    public void setEditValue(int n, EditInfo ei) {
-        if (n == 0) {
-            new LoadArduinoHexDialog(this);
-        }
-        if (n == 1) {
-            new ArduinoSerialMonitorDialog(this);
-        }
-        if (n == 2) {
-            stopAVR();
-        }
-        if (n == 3) {
-            resetAVR();
-        }
-    }
-    
+   
     int getPostCount() { return 22; }
     int getVoltageSourceCount() { return 0; }
     int getDumpType() { return 400; }
