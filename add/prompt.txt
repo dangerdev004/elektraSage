@@ -1,0 +1,247 @@
+
+You are a **RAG-based Circuit Simulator** using Falstad circuit text files. The base circuit text retrieve is provided below:  
+
+======================================================================
+INDEX: 75
+CIRCUIT NAME: Digital-to-Analog Converter (R-2R DAC)
+DESCRIPTION: Basic R-2R ladder DAC converting digital input to analog output
+CATEGORY: data-conversion
+KEYWORDS: DAC, R-2R, digital to analog, converter
+======================================================================
+CIRCUIT TEXT:
+$ 1 5.0E-6 10 50 5.0
+w 208 128 208 192 0
+w 320 208 320 128 0
+r 208 128 320 128 0 160.6
+g 208 288 208 320 0
+w 208 192 176 192 0
+w 176 192 176 160 0
+r 176 160 112 160 0 200.0
+r 112 224 176 224 0 400.0
+L 112 160 80 160 0 true false 5.0 0.0
+L 112 224 80 224 0 false false 5.0 0.0
+w 176 160 176 96 0
+r 112 288 176 288 0 800.0
+r 112 96 176 96 0 100.0
+L 112 96 80 96 0 true false 5.0 0.0
+L 112 288 80 288 0 false false 5.0 0.0
+a 208 208 320 208 0 15.0 -15.0
+O 320 208 368 208 1
+w 208 224 208 288 0
+w 176 288 176 224 0
+w 176 224 176 192 0
+
+
+
+======================================================================
+INDEX: 200
+CIRCUIT NAME: R-2R Ladder DAC
+DESCRIPTION: Digital-to-analog converter using resistor ladder network
+CATEGORY: data-conversion
+KEYWORDS: R-2R, DAC, ladder, digital to analog
+======================================================================
+CIRCUIT TEXT:
+$ 1 5.0E-6 10 64 5.0
+160 160 144 160 240 0
+160 240 144 240 240 0
+160 320 144 320 240 0
+g 144 240 144 288 0
+g 224 240 224 288 0
+g 304 240 304 288 0
+w 176 192 192 192 0
+w 176 240 176 256 0
+w 176 256 256 256 0
+w 256 256 256 240 0
+w 256 256 336 256 0
+w 336 256 336 240 0
+w 192 192 192 320 0
+w 256 192 272 192 0
+w 272 192 272 320 0
+w 336 192 352 192 0
+w 352 192 352 320 0
+L 192 320 192 352 0 false false
+L 272 320 272 352 0 false false
+L 352 320 352 352 0 true false
+r 160 144 160 80 0 100000.0
+r 240 144 240 80 0 100000.0
+r 320 144 320 80 0 100000.0
+r 160 80 240 80 0 50000.0
+r 240 80 320 80 0 50000.0
+r 320 80 400 80 0 100000.0
+g 400 80 400 112 0
+w 416 256 416 224 0
+w 528 224 528 272 0
+O 528 272 592 272 1
+w 336 256 416 256 0
+r 416 224 528 224 0 50100.0
+g 416 288 416 320 0
+a 416 272 528 272 0 20.0 -20.0
+r 160 80 80 80 0 50000.0
+r 80 80 80 144 0 100000.0
+160 80 144 80 240 0
+w 96 192 112 192 0
+w 112 192 112 320 0
+g 64 240 64 288 0
+L 112 320 112 352 0 true false
+R 80 80 32 80 0 0 40.0 16.0 0.0
+w 96 240 96 256 0
+w 96 256 176 256 0
+
+
+
+======================================================================
+INDEX: 232
+CIRCUIT NAME: Switched Binary-Weighted DAC
+DESCRIPTION: Digital-to-analog converter using switched binary-weighted resistor network
+CATEGORY: data-conversion
+KEYWORDS: DAC, binary weighted, digital to analog, switching
+======================================================================
+CIRCUIT TEXT:
+$ 3 5.0E-6 10.391409633455755 50 5.0 50
+160 312 192 248 192 1
+160 312 272 248 272 1
+160 312 352 248 352 1
+160 312 112 248 112 1
+160 376 152 312 152 1
+160 376 312 312 312 1
+160 440 232 376 232 1
+w 376 152 376 216 0
+w 376 248 376 312 0
+w 312 272 312 296 0
+w 312 328 312 352 0
+w 312 168 312 192 0
+w 312 112 312 136 0
+O 440 232 496 232 1
+r 168 208 168 256 0 100.0
+r 168 256 168 304 0 100.0
+r 168 304 168 352 0 100.0
+r 168 352 168 400 0 100.0
+r 168 208 168 160 0 100.0
+r 168 160 168 112 0 100.0
+r 168 112 168 64 0 100.0
+w 168 64 248 64 0
+w 248 64 248 96 0
+w 168 112 216 112 0
+w 168 160 248 160 0
+w 248 160 248 176 0
+w 168 208 248 208 0
+w 168 256 248 256 0
+w 168 304 248 304 0
+w 248 304 248 288 0
+w 168 352 208 352 0
+w 208 352 208 336 0
+w 208 336 248 336 0
+w 168 400 248 400 0
+w 248 400 248 368 0
+w 216 112 216 128 0
+w 216 128 248 128 0
+82 168 64 168 32 0 0 40.0 7.001 0.0 0.0 0.5
+g 168 400 168 424 0
+w 280 128 280 208 0
+w 280 208 280 288 0
+w 280 288 280 368 0
+w 344 168 344 328 0
+w 408 248 408 368 0
+w 344 328 344 368 0
+L 408 368 464 368 0 false false 5.0 0.0
+w 344 368 344 400 0
+L 344 400 464 400 0 false false 5.0 0.0
+w 280 368 280 432 0
+L 280 432 464 432 0 false false 5.0 0.0
+
+
+
+======================================================================
+INDEX: 106
+CIRCUIT NAME: Frequency Doubler
+DESCRIPTION: Analog circuit that doubles the input frequency
+CATEGORY: signal-processing
+KEYWORDS: frequency doubler, analog, wave shaping
+======================================================================
+CIRCUIT TEXT:
+$ 1 5.0E-6 6.75 61 5.0
+158 416 192 448 192 0
+c 512 192 512 224 0 1.0E-7 0
+r 512 256 576 256 0 3000.0
+r 512 288 576 288 0 100000.0
+w 576 256 576 288 0
+g 576 288 576 320 0
+R 128 144 64 144 0 2 300.0 2.5 2.5
+g 304 224 304 256 0
+w 416 160 416 192 0
+a 336 96 416 96 1 15.0 -15.0
+w 304 80 336 80 0
+w 336 112 336 160 0
+w 336 160 416 160 0
+w 416 160 416 96 0
+161 128 144 176 144 0
+r 224 144 304 144 0 2000.0
+w 304 80 304 144 0
+c 304 144 304 176 0 9.999999999999999E-6 0
+155 128 240 144 240 0 5.0
+w 224 240 224 208 0
+w 224 208 128 208 0
+w 128 208 128 176 0
+w 224 304 224 336 0
+w 224 336 96 336 0
+w 96 336 96 240 0
+w 96 240 128 240 0
+w 128 272 64 272 0
+w 64 272 64 352 0
+w 64 352 416 352 0
+w 416 352 416 288 0
+O 416 352 480 352 0
+r 304 176 304 224 0 1000.0
+o 6 8 0 14 5.0 4.8828125E-5 0
+o 30 8 0 14 5.0 9.765625E-5 0
+
+
+
+======================================================================
+INDEX: 82
+CIRCUIT NAME: RC Differentiator Circuit
+DESCRIPTION: Simple passive differentiator circuit using resistor and capacitor
+CATEGORY: analog-filters
+KEYWORDS: RC, differentiator, passive, analog
+======================================================================
+CIRCUIT TEXT:
+$ 1 5.0E-6 10 50 5.0
+v 160 288 160 144 0 2 40.0 5.0 0.0
+c 160 144 352 144 0 9.0E-6 4.999340978003125
+r 352 144 352 288 0 120.0
+w 160 288 352 288 0
+o 0 64 0 2 10.0 9.765625E-5 0
+o 2 64 0 3 20.0 0.2 0
+h 2 2 1
+
+
+
+
+================ USER QUERY ================
+design 6-bit r2r DAC 
+
+The objective is to generate a circuit design based on the user’s specifications while maintaining the integrity of the original circuit design. 
+
+You have to follow these steps:  
+1. Analyze the provided base circuit text thoroughly.  
+2. If the user request is simply to present the circuit without specifying changes, and if it matches the base circuit design, return the base circuit text as is.  
+3. If the user requests an extension or reduction of the base circuit, adjust the circuit accordingly while ensuring that:
+   - All components remain connected and coherent.
+   - Adjust component placements based on the base circuit's canvas logic, ensuring no components overlap and that there are no disconnections.
+   - Maintain the original design flow; do not alter the fundamental circuit topology unless explicitly requested. 
+   - Properly space out the components for clarity and create appropriate junction nodes where wires branch out.
+   - Ensure that proper power supply or ground connections are established for any new components added.
+
+Avoid any hallucination, and focus on providing accurate and well-structured circuit text. 
+
+The final deliverable should be the updated circuit text based on the user’s specifications without additional explanations.
+
+Make sure to follow these guidelines for clarity:  
+- Use proper node connections.
+- Ensure no overlapping components.
+- Maintain clear spacing between components.
+- Adjust component positions based on the original circuit layout.
+- Dont cross wires over any component
+
+I want you to provide the finalized circuit text for the user’s query:  
+design 6-bit r2r DAC 
