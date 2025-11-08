@@ -545,6 +545,7 @@ MouseOutHandler, MouseWheelHandler {
 
 	// make buttons side by side if there's room
 	buttonPanel=(VERTICALPANELWIDTH == 166) ? new HorizontalPanel() : new VerticalPanel();
+	buttonPanel.setStyleName("buttonPanel");
 
 	m = new MenuBar(true);
 	m.addItem(undoItem = menuItemWithShortcut("ccw", "Undo", Locale.LS(ctrlMetaKey + "Z"), new MyCommand("edit","undo")));
@@ -771,6 +772,7 @@ MouseOutHandler, MouseWheelHandler {
 	l.addStyleName("topSpace");
 	//        l.setFont(f);
 	titleLabel = new Label("Label");
+	titleLabel.setStyleName("circuitTitle");
 	//        titleLabel.setFont(f);
 	verticalPanel.add(l);
 	verticalPanel.add(titleLabel);

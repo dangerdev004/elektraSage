@@ -1,0 +1,7 @@
+import { CPU } from '../cpu/cpu';
+import { AVRIOPort } from './gpio';
+export declare class AVRUSI {
+    private START;
+    private OVF;
+    constructor(cpu: CPU, port: AVRIOPort, portPin: number, dataPin: number, clockPin: number);
+}

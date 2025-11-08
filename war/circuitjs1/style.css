@@ -5,6 +5,29 @@
 	display: none;
 }
 
+/* Add spacing and centering for labels */
+.topSpace {
+	margin-top: 15px;
+	margin-left: 10px;
+	margin-right: 10px;
+	text-align: center;
+}
+
+/* Center button panel */
+.buttonPanel {
+	display: flex;
+	justify-content: center;
+	gap: 10px;
+	margin: 10px 0;
+}
+
+/* Center circuit title */
+.circuitTitle {
+	text-align: center;
+	margin: 5px 10px;
+	font-weight: normal;
+}
+
 @media only screen and (max-width: 600px) {
 	.triggerLabel {
 		display: initial;

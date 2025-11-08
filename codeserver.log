@@ -1,10 +1,12 @@
 Turning off precompile in incremental mode.
 Super Dev Mode starting up
-   workDir: /tmp/gwt-codeserver-778506698943461074.tmp
+   workDir: /tmp/gwt-codeserver-3754088130253453557.tmp
+   Loading inherited module 'com.lushprojects.circuitjs1.circuitjs1'
+      [WARN] Line 12: Setting configuration property named 'jsinterop.checks' in module 'com.lushprojects.circuitjs1.circuitjs1' that has not been previously defined
    Loading Java files in com.lushprojects.circuitjs1.circuitjs1.
-   Ignored 80 units with compilation errors in first pass.
+   Ignored 83 units with compilation errors in first pass.
 Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-   Module setup completed in 8920 ms
+   Module setup completed in 9681 ms
 
 The code server is ready at http://172.31.229.32:9876/
 GET /recompile/circuitjs1
@@ -12,7 +14,7 @@ GET /recompile/circuitjs1
       starting job: com.lushprojects.circuitjs1.circuitjs1_1_0
       binding: user.agent=safari
       Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 80 units with compilation errors in first pass.
+         Ignored 83 units with compilation errors in first pass.
 Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
          Computing all possible rebind results for 'com.google.gwt.useragent.client.UserAgentAsserter'
             Rebinding com.google.gwt.useragent.client.UserAgentAsserter
@@ -20,99 +22,152 @@ Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
                   [WARN] Detected warnings related to 'com.google.gwt.editor.client.SimpleBeanEditorDriver'.   Are validation-api-<version>.jar and validation-api-<version>-sources.jar on the classpath?
                   Specify -logLevel DEBUG to see all errors.
                   [WARN] Unknown type 'com.google.gwt.editor.client.SimpleBeanEditorDriver' specified in deferred binding rule
-         Unification traversed 28909 fields and methods and 2371 types. 2337 are considered part of the current module and 2337 had all of their fields and methods traversed.
-         Warnings in com/google/gwt/emul/java/util/Arrays.java
-            [WARN] Line 1782: [unusable-by-js] Type of parameter 'd1' in 'int Arrays.1methodref$compare$Type.compare(long, long)' is not usable by but exposed to JavaScript.
-            [WARN] Line 1782: [unusable-by-js] Type of parameter 'd2' in 'int Arrays.1methodref$compare$Type.compare(long, long)' is not usable by but exposed to JavaScript.
-         [WARN] Suppress "[unusable-by-js]" warnings by adding a `@SuppressWarnings("unusable-by-js")` annotation to the corresponding member.
-         Compiling 1 permutation
-            Compiling permutation 0...
-            Linking per-type JS with 2316 new/changed types.
-            Source Maps Enabled
-         Compile of permutations succeeded
-         Compilation succeeded -- 6.002s
-      Linking into /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-2/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-2/extras/circuitjs1
-         Link succeeded
-         Linking succeeded -- 0.328s
-      6.408s total -- Compile completed
+         [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
+            [ERROR] Line 66: PORT.PortListener cannot be resolved to a type
+            [ERROR] Line 67: PORT.PortListener cannot be resolved to a type
+            [ERROR] Line 68: PORT.PortListener cannot be resolved to a type
+            [ERROR] Line 305: portBListener cannot be resolved to a variable
+            [ERROR] Line 305: The target type of this expression must be a functional interface
+            [ERROR] Line 308: portBListener cannot be resolved to a variable
+            [ERROR] Line 311: portCListener cannot be resolved to a variable
+            [ERROR] Line 311: The target type of this expression must be a functional interface
+            [ERROR] Line 314: portCListener cannot be resolved to a variable
+            [ERROR] Line 317: portDListener cannot be resolved to a variable
+            [ERROR] Line 317: The target type of this expression must be a functional interface
+            [ERROR] Line 320: portDListener cannot be resolved to a variable
+            [ERROR] Line 509: Button cannot be resolved to a type
+            [ERROR] Line 514: Button cannot be resolved to a type
+            [ERROR] Line 519: Button cannot be resolved to a type
+            [ERROR] Line 538: The method setEditDialog(null) is undefined for the type CirSim
+         Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.ArduinoElm'
+            [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
+               [ERROR] Line 68: PORT.PortListener cannot be resolved to a type
+               [ERROR] Line 305: portBListener cannot be resolved to a variable
+               [ERROR] Line 311: The target type of this expression must be a functional interface
+               [ERROR] Line 305: The target type of this expression must be a functional interface
+               [ERROR] Line 320: portDListener cannot be resolved to a variable
+               [ERROR] Line 538: The method setEditDialog(null) is undefined for the type CirSim
+               [ERROR] Line 314: portCListener cannot be resolved to a variable
+               [ERROR] Line 317: portDListener cannot be resolved to a variable
+               [ERROR] Line 308: portBListener cannot be resolved to a variable
+               [ERROR] Line 514: Button cannot be resolved to a type
+               [ERROR] Line 311: portCListener cannot be resolved to a variable
+               [ERROR] Line 66: PORT.PortListener cannot be resolved to a type
+               [ERROR] Line 509: Button cannot be resolved to a type
+               [ERROR] Line 519: Button cannot be resolved to a type
+               [ERROR] Line 67: PORT.PortListener cannot be resolved to a type
+               [ERROR] Line 317: The target type of this expression must be a functional interface
+         [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
+         Unification traversed 28868 fields and methods and 2370 types. 2336 are considered part of the current module and 2336 had all of their fields and methods traversed.
+      [ERROR] Compiler returned false
+      [WARN] recompile failed
+      [WARN] continuing to serve previous version
 GET /recompile/circuitjs1
    Job com.lushprojects.circuitjs1.circuitjs1_1_1
       starting job: com.lushprojects.circuitjs1.circuitjs1_1_1
       binding: user.agent=safari
-      skipped compile because no input files have changed
-      0.034s total -- Compile completed
+      Compiling module com.lushprojects.circuitjs1.circuitjs1
+         Ignored 82 units with compilation errors in first pass.
+Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
+         [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/LoadArduinoHexDialog.java'
+            [ERROR] Line 124: Cannot reduce the visibility of the inherited method from Dialog
+         Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.LoadArduinoHexDialog'
+            [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/LoadArduinoHexDialog.java'
+               [ERROR] Line 124: Cannot reduce the visibility of the inherited method from Dialog
+         [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
+         [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoSerialMonitorDialog.java'
+            [ERROR] Line 110: Cannot reduce the visibility of the inherited method from Dialog
+         Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog'
+            [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoSerialMonitorDialog.java'
+               [ERROR] Line 110: Cannot reduce the visibility of the inherited method from Dialog
+         [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
+         Unification traversed 29048 fields and methods and 2384 types. 2350 are considered part of the current module and 2350 had all of their fields and methods traversed.
+      [ERROR] Compiler returned false
+      [WARN] recompile failed
+      [WARN] continuing to serve previous version
 GET /recompile/circuitjs1
    Job com.lushprojects.circuitjs1.circuitjs1_1_2
       starting job: com.lushprojects.circuitjs1.circuitjs1_1_2
       binding: user.agent=safari
       Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 80 units with compilation errors in first pass.
+         Ignored 81 units with compilation errors in first pass.
 Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         Unification traversed 2479 fields and methods and 1078 types. 2 are considered part of the current module and 13 had all of their fields and methods traversed.
-         Compiling 1 permutation
-            Compiling permutation 0...
-            Linking per-type JS with 2 new/changed types.
-            Source Maps Enabled
-         Compile of permutations succeeded
-         Compilation succeeded -- 1.430s
-      Linking into /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-4/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-4/extras/circuitjs1
-         Link succeeded
-         Linking succeeded -- 0.177s
-      1.716s total -- Compile completed
+         [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoSerialMonitorDialog.java'
+            [ERROR] Line 110: Cannot reduce the visibility of the inherited method from Dialog
+         Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog'
+            [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoSerialMonitorDialog.java'
+               [ERROR] Line 110: Cannot reduce the visibility of the inherited method from Dialog
+         [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
+         Unification traversed 29079 fields and methods and 2388 types. 2354 are considered part of the current module and 2354 had all of their fields and methods traversed.
+      [ERROR] Compiler returned false
+      [WARN] recompile failed
+      [WARN] continuing to serve previous version
 GET /recompile/circuitjs1
    Job com.lushprojects.circuitjs1.circuitjs1_1_3
       starting job: com.lushprojects.circuitjs1.circuitjs1_1_3
       binding: user.agent=safari
       Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 81 units with compilation errors in first pass.
+         Ignored 80 units with compilation errors in first pass.
 Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
-            [ERROR] Line 57: The constructor ChipElm(int, int, int, int, int, StringTokenizer) is undefined
-         Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.ArduinoElm'
-            [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
-               [ERROR] Line 57: The constructor ChipElm(int, int, int, int, int, StringTokenizer) is undefined
-         [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
-         Unification traversed 2409 fields and methods and 1071 types. 1 are considered part of the current module and 12 had all of their fields and methods traversed.
-         [WARN] Some stale types ([com.lushprojects.circuitjs1.client.ArduinoElm]) were not reprocessed as was expected. This is either a compiler bug or a Generator has legitimately stopped creating these types.
-      [ERROR] Compiler returned false
-      [WARN] recompile failed
-      [WARN] continuing to serve previous version
+         Unification traversed 29116 fields and methods and 2393 types. 2359 are considered part of the current module and 2359 had all of their fields and methods traversed.
+         Warnings in com/google/gwt/emul/java/util/Arrays.java
+            [WARN] Line 1782: [unusable-by-js] Type of parameter 'd1' in 'int Arrays.1methodref$compare$Type.compare(long, long)' is not usable by but exposed to JavaScript.
+            [WARN] Line 1782: [unusable-by-js] Type of parameter 'd2' in 'int Arrays.1methodref$compare$Type.compare(long, long)' is not usable by but exposed to JavaScript.
+         Warnings in com/lushprojects/circuitjs1/client/Microcontrollers/AVR8JS.java
+            [WARN] Line 87: [unusable-by-js] Return type of 'Uint8Array AVR8JS.CPU.getData()' is not usable by but exposed to JavaScript.
+         [WARN] Suppress "[unusable-by-js]" warnings by adding a `@SuppressWarnings("unusable-by-js")` annotation to the corresponding member.
+         Compiling 1 permutation
+            Compiling permutation 0...
+            Linking per-type JS with 2338 new/changed types.
+            Source Maps Enabled
+         Compile of permutations succeeded
+         Compilation succeeded -- 5.202s
+      Linking into /tmp/gwt-codeserver-3754088130253453557.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-5/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-3754088130253453557.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-5/extras/circuitjs1
+         Link succeeded
+         Linking succeeded -- 0.395s
+      5.713s total -- Compile completed
 GET /recompile/circuitjs1
    Job com.lushprojects.circuitjs1.circuitjs1_1_4
       starting job: com.lushprojects.circuitjs1.circuitjs1_1_4
       binding: user.agent=safari
       Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 80 units with compilation errors in first pass.
+         Ignored 82 units with compilation errors in first pass.
 Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         Unification traversed 2479 fields and methods and 1078 types. 2 are considered part of the current module and 13 had all of their fields and methods traversed.
-         Compiling 1 permutation
-            Compiling permutation 0...
-            Linking per-type JS with 2 new/changed types.
-            Source Maps Enabled
-         Compile of permutations succeeded
-         Compilation succeeded -- 1.144s
-      Linking into /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-6/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-6/extras/circuitjs1
-         Link succeeded
-         Linking succeeded -- 0.109s
-      1.361s total -- Compile completed
+         [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/LoadArduinoHexDialog.java'
+            [ERROR] Line 58: The method isUsingAVR8JS() is undefined for the type ArduinoElm
+         Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.LoadArduinoHexDialog'
+            [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/LoadArduinoHexDialog.java'
+               [ERROR] Line 58: The method isUsingAVR8JS() is undefined for the type ArduinoElm
+         [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
+         [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoSerialMonitorDialog.java'
+            [ERROR] Line 37: The method isUsingAVR8JS() is undefined for the type ArduinoElm
+         Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog'
+            [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoSerialMonitorDialog.java'
+               [ERROR] Line 37: The method isUsingAVR8JS() is undefined for the type ArduinoElm
+         [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
+         Unification traversed 2582 fields and methods and 1085 types. 6 are considered part of the current module and 24 had all of their fields and methods traversed.
+         [WARN] Some stale types ([com.lushprojects.circuitjs1.client.LoadArduinoHexDialog, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog]) were not reprocessed as was expected. This is either a compiler bug or a Generator has legitimately stopped creating these types.
+      [ERROR] Compiler returned false
+      [WARN] recompile failed
+      [WARN] continuing to serve previous version
 GET /recompile/circuitjs1
    Job com.lushprojects.circuitjs1.circuitjs1_1_5
       starting job: com.lushprojects.circuitjs1.circuitjs1_1_5
       binding: user.agent=safari
       Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 81 units with compilation errors in first pass.
+         Ignored 80 units with compilation errors in first pass.
 Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
-            [ERROR] Line 56: The constructor ChipElm(int, int, int, int, int, StringTokenizer) is undefined
-         Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.ArduinoElm'
-            [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
-               [ERROR] Line 56: The constructor ChipElm(int, int, int, int, int, StringTokenizer) is undefined
-         [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
-         Unification traversed 2409 fields and methods and 1071 types. 1 are considered part of the current module and 12 had all of their fields and methods traversed.
-         [WARN] Some stale types ([com.lushprojects.circuitjs1.client.ArduinoElm]) were not reprocessed as was expected. This is either a compiler bug or a Generator has legitimately stopped creating these types.
-      [ERROR] Compiler returned false
-      [WARN] recompile failed
-      [WARN] continuing to serve previous version
+         Unification traversed 2662 fields and methods and 1111 types. 15 are considered part of the current module and 33 had all of their fields and methods traversed.
+         Compiling 1 permutation
+            Compiling permutation 0...
+            Linking per-type JS with 15 new/changed types.
+            Source Maps Enabled
+         Compile of permutations succeeded
+         Compilation succeeded -- 1.498s
+      Linking into /tmp/gwt-codeserver-3754088130253453557.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-7/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-3754088130253453557.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-7/extras/circuitjs1
+         Link succeeded
+         Linking succeeded -- 0.111s
+      1.811s total -- Compile completed
 GET /recompile/circuitjs1
    Job com.lushprojects.circuitjs1.circuitjs1_1_6
       starting job: com.lushprojects.circuitjs1.circuitjs1_1_6
@@ -121,13 +176,21 @@ GET /recompile/circuitjs1
          Ignored 81 units with compilation errors in first pass.
 Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
          [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
-            [ERROR] Line 56: The constructor ChipElm(int, int, int, int, int, StringTokenizer) is undefined
+            [ERROR] Line 114: The method drawPins(Graphics) is undefined for the type ArduinoElm
+            [ERROR] Line 115: The method drawLabeledNode(Graphics, String, Point, Point) in the type CircuitElm is not applicable for the arguments (Graphics)
+            [ERROR] Line 124: The method darker() is undefined for the type Color
+            [ERROR] Line 129: The method darker() is undefined for the type Color
+            [ERROR] Line 143: PLAIN cannot be resolved or is not a field
          Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.ArduinoElm'
             [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
-               [ERROR] Line 56: The constructor ChipElm(int, int, int, int, int, StringTokenizer) is undefined
+               [ERROR] Line 114: The method drawPins(Graphics) is undefined for the type ArduinoElm
+               [ERROR] Line 115: The method drawLabeledNode(Graphics, String, Point, Point) in the type CircuitElm is not applicable for the arguments (Graphics)
+               [ERROR] Line 129: The method darker() is undefined for the type Color
+               [ERROR] Line 143: PLAIN cannot be resolved or is not a field
+               [ERROR] Line 124: The method darker() is undefined for the type Color
          [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
-         Unification traversed 4583 fields and methods and 1192 types. 76 are considered part of the current module and 88 had all of their fields and methods traversed.
-         [WARN] Some stale types ([com.lushprojects.circuitjs1.client.ArduinoElm]) were not reprocessed as was expected. This is either a compiler bug or a Generator has legitimately stopped creating these types.
+         Unification traversed 2454 fields and methods and 1097 types. 3 are considered part of the current module and 14 had all of their fields and methods traversed.
+         [WARN] Some stale types ([com.lushprojects.circuitjs1.client.ArduinoElm$3, com.lushprojects.circuitjs1.client.ArduinoElm$4, com.lushprojects.circuitjs1.client.ArduinoElm$1, com.lushprojects.circuitjs1.client.ArduinoElm$2, com.lushprojects.circuitjs1.client.ArduinoElm]) were not reprocessed as was expected. This is either a compiler bug or a Generator has legitimately stopped creating these types.
       [ERROR] Compiler returned false
       [WARN] recompile failed
       [WARN] continuing to serve previous version
@@ -138,38 +201,14 @@ GET /recompile/circuitjs1
       Compiling module com.lushprojects.circuitjs1.circuitjs1
          Ignored 80 units with compilation errors in first pass.
 Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         Unification traversed 4619 fields and methods and 1193 types. 77 are considered part of the current module and 89 had all of their fields and methods traversed.
+         Unification traversed 2625 fields and methods and 1111 types. 8 are considered part of the current module and 26 had all of their fields and methods traversed.
          Compiling 1 permutation
             Compiling permutation 0...
-            Linking per-type JS with 77 new/changed types.
+            Linking per-type JS with 8 new/changed types.
             Source Maps Enabled
          Compile of permutations succeeded
-         Compilation succeeded -- 1.386s
-      Linking into /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-9/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-9/extras/circuitjs1
+         Compilation succeeded -- 1.282s
+      Linking into /tmp/gwt-codeserver-3754088130253453557.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-9/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-3754088130253453557.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-9/extras/circuitjs1
          Link succeeded
-         Linking succeeded -- 0.108s
-      1.584s total -- Compile completed
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_8
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_8
-      binding: user.agent=safari
-      Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 80 units with compilation errors in first pass.
-Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         Unification traversed 2497 fields and methods and 1072 types. 2 are considered part of the current module and 13 had all of their fields and methods traversed.
-         Compiling 1 permutation
-            Compiling permutation 0...
-            Linking per-type JS with 2 new/changed types.
-            Source Maps Enabled
-         Compile of permutations succeeded
-         Compilation succeeded -- 2.055s
-      Linking into /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-10/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-778506698943461074.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-10/extras/circuitjs1
-         Link succeeded
-         Linking succeeded -- 0.228s
-      2.436s total -- Compile completed
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_9
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_9
-      binding: user.agent=safari
-      skipped compile because no input files have changed
-      0.035s total -- Compile completed
+         Linking succeeded -- 0.099s
+      1.548s total -- Compile completed

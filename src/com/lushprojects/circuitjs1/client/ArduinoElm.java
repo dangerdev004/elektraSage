@@ -1,9 +1,19 @@
 package com.lushprojects.circuitjs1.client;
 
-import java.util.StringTokenizer;
+import com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS;
+import com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS.AVRRunner;
+import com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS.PortListener;
+import com.lushprojects.circuitjs1.client.Microcontrollers.HexParser;
+import com.google.gwt.typedarrays.shared.Uint8Array;
+import com.google.gwt.user.client.ui.Button;
 
+/**
+ * Arduino Uno element with AVR8JS emulation
+ * Runs real Arduino code compiled to hex files
+ */
 class ArduinoElm extends ChipElm {
-    // Pin indices for all Arduino Uno pins
+    
+    // Pin indices for Arduino Uno
     final int N_D0 = 0;
     final int N_D1 = 1;
     final int N_D2 = 2;
@@ -27,80 +37,74 @@ class ArduinoElm extends ChipElm {
     final int N_VCC = 20;
     final int N_GND = 21;
     
-    // Arduino constants
-    final int INPUT = 0;
-    final int OUTPUT = 1;
-    final int INPUT_PULLUP = 2;
-    final int HIGH = 1;
-    final int LOW = 0;
-    
-    // Pin state arrays
-    int[] pinModes = new int[20];
+    // Pin state tracking
     boolean[] pinStates = new boolean[20];
-    int[] analogValues = new int[6]; // 10-bit ADC values (0-1023)
-    int[] pwmValues = new int[6]; // PWM capable pins: 3,5,6,9,10,11
-    boolean[] pwmEnabled = new boolean[6];
+    int[] analogValues = new int[6]; // 10-bit ADC (0-1023)
     
-    // Timing
-    long simulationTime = 0; // in microseconds
-    long lastExecuteTime = 0;
-    final long EXECUTE_INTERVAL = 100; // Execute Arduino logic every 100us
+    // AVR8JS core
+    private AVRRunner avrRunner = null;
+    private boolean isRunning = false;
+    private double lastSimTime = 0;
+    private static final double CPU_FREQ = 16000000.0; // 16 MHz
     
-    // Serial buffer (simplified)
-    StringBuilder serialBuffer = new StringBuilder();
+    // Port listeners
+    private PortListener portBListener;
+    private PortListener portCListener;
+    private PortListener portDListener;
     
+    // Serial output buffer
+    private StringBuilder serialBuffer = new StringBuilder();
+    
+    // Circuit properties
     int ground;
     double vcc = 5.0;
     
     public ArduinoElm(int xx, int yy) { 
         super(xx, yy);
         for (int i = 0; i < 20; i++) {
-            pinModes[i] = INPUT;
             pinStates[i] = false;
         }
         for (int i = 0; i < 6; i++) {
             analogValues[i] = 0;
-            pwmValues[i] = 0;
-            pwmEnabled[i] = false;
         }
     }
     
     String getChipName() { return "Arduino Uno"; }
     
     void setupPins() {
-        sizeX = 6;
-        sizeY = 11;
+        sizeX = 8;  // Wider to look more like Arduino board
+        sizeY = 14; // Taller to accommodate all pins
         pins = new Pin[22];
         
         // Left side - Digital pins D0-D7
-        pins[N_D0] = new Pin(0, SIDE_W, "D0");
-        pins[N_D1] = new Pin(1, SIDE_W, "D1");
-        pins[N_D2] = new Pin(2, SIDE_W, "D2");
-        pins[N_D3] = new Pin(3, SIDE_W, "~D3");  // ~ indicates PWM
-        pins[N_D4] = new Pin(4, SIDE_W, "D4");
-        pins[N_D5] = new Pin(5, SIDE_W, "~D5");
-        pins[N_D6] = new Pin(6, SIDE_W, "~D6");
-        pins[N_D7] = new Pin(7, SIDE_W, "D7");
+        pins[N_D0] = new Pin(1, SIDE_W, "D0");
+        pins[N_D1] = new Pin(2, SIDE_W, "D1");
+        pins[N_D2] = new Pin(3, SIDE_W, "D2");
+        pins[N_D3] = new Pin(4, SIDE_W, "~D3");
+        pins[N_D4] = new Pin(5, SIDE_W, "D4");
+        pins[N_D5] = new Pin(6, SIDE_W, "~D5");
+        pins[N_D6] = new Pin(7, SIDE_W, "~D6");
+        pins[N_D7] = new Pin(8, SIDE_W, "D7");
         
         // Right side - Digital pins D8-D13
-        pins[N_D8] = new Pin(0, SIDE_E, "D8");
-        pins[N_D9] = new Pin(1, SIDE_E, "~D9");
-        pins[N_D10] = new Pin(2, SIDE_E, "~D10");
-        pins[N_D11] = new Pin(3, SIDE_E, "~D11");
-        pins[N_D12] = new Pin(4, SIDE_E, "D12");
-        pins[N_D13] = new Pin(5, SIDE_E, "D13");
+        pins[N_D8] = new Pin(1, SIDE_E, "D8");
+        pins[N_D9] = new Pin(2, SIDE_E, "~D9");
+        pins[N_D10] = new Pin(3, SIDE_E, "~D10");
+        pins[N_D11] = new Pin(4, SIDE_E, "~D11");
+        pins[N_D12] = new Pin(5, SIDE_E, "D12");
+        pins[N_D13] = new Pin(6, SIDE_E, "D13");
         
         // Bottom - Analog pins
-        pins[N_A0] = new Pin(0, SIDE_S, "A0");
-        pins[N_A1] = new Pin(1, SIDE_S, "A1");
-        pins[N_A2] = new Pin(2, SIDE_S, "A2");
-        pins[N_A3] = new Pin(3, SIDE_S, "A3");
-        pins[N_A4] = new Pin(4, SIDE_S, "A4");
-        pins[N_A5] = new Pin(5, SIDE_S, "A5");
+        pins[N_A0] = new Pin(1, SIDE_S, "A0");
+        pins[N_A1] = new Pin(2, SIDE_S, "A1");
+        pins[N_A2] = new Pin(3, SIDE_S, "A2");
+        pins[N_A3] = new Pin(4, SIDE_S, "A3");
+        pins[N_A4] = new Pin(5, SIDE_S, "A4");
+        pins[N_A5] = new Pin(6, SIDE_S, "A5");
         
         // Top - Power
         pins[N_VCC] = new Pin(2, SIDE_N, "5V");
-        pins[N_GND] = new Pin(3, SIDE_N, "GND");
+        pins[N_GND] = new Pin(4, SIDE_N, "GND");
     }
     
     boolean nonLinear() { return true; }
@@ -122,22 +126,19 @@ class ArduinoElm extends ChipElm {
     
     void calculateCurrent() {
         double totalCurrent = 0;
-        double pinResistance = 40; // Arduino output pin resistance ~40 ohms
+        double pinResistance = 40; // Output pin resistance ~40 ohms
         
-        for (int i = 0; i < 14; i++) { // Digital pins
-            if (pinModes[i] == OUTPUT) {
-                if (pinStates[i]) {
-                    pins[i].current = (volts[N_VCC] - volts[i]) / pinResistance;
-                } else {
-                    pins[i].current = (volts[i] - volts[N_GND]) / pinResistance;
-                }
-                totalCurrent += Math.abs(pins[i].current);
+        // Calculate current for output pins
+        for (int i = 0; i < 14; i++) { // Digital pins D0-D13
+            if (pinStates[i]) { // If pin is HIGH
+                pins[i].current = (volts[N_VCC] - volts[i]) / pinResistance;
             } else {
-                pins[i].current = 0;
+                pins[i].current = (volts[i] - volts[N_GND]) / pinResistance;
             }
+            totalCurrent += Math.abs(pins[i].current);
         }
         
-        // Add quiescent current (Arduino itself draws ~50mA)
+        // Add quiescent current (Arduino ~50mA)
         totalCurrent += 0.05;
         
         pins[N_VCC].current = -totalCurrent;
@@ -145,20 +146,10 @@ class ArduinoElm extends ChipElm {
     }
     
     void startIteration() {
+        // Read voltages
         double groundVolts = volts[N_GND];
         double vccVolts = volts[N_VCC];
         vcc = vccVolts - groundVolts;
-        
-        // Read digital input pins
-        for (int i = 0; i < 14; i++) {
-            if (pinModes[i] == INPUT || pinModes[i] == INPUT_PULLUP) {
-                double threshold = vcc / 2;
-                if (pinModes[i] == INPUT_PULLUP) {
-                    threshold = vcc * 0.3; // Lower threshold with pullup
-                }
-                pinStates[i] = (volts[i] - groundVolts) > threshold;
-            }
-        }
         
         // Read analog input pins (A0-A5)
         for (int i = 0; i < 6; i++) {
@@ -168,164 +159,239 @@ class ArduinoElm extends ChipElm {
             analogValues[i] = (int)((voltage / vcc) * 1023); // 10-bit ADC
         }
         
-        // Update simulation time
-        simulationTime += (long)(sim.timeStep * 1000000);
-        
-        // Execute Arduino logic at fixed intervals
-        if (simulationTime - lastExecuteTime >= EXECUTE_INTERVAL) {
-            execute();
-            lastExecuteTime = simulationTime;
+        // Execute AVR if running
+        if (isRunning && avrRunner != null) {
+            double currentTime = sim.t;
+            double elapsedTime = currentTime - lastSimTime;
+            lastSimTime = currentTime;
+            
+            // Execute CPU cycles
+            double cycles = elapsedTime * CPU_FREQ;
+            if (cycles > 0) {
+                try {
+                    avrRunner.execute(cycles);
+                } catch (Exception e) {
+                    console("AVR execution error: " + e.getMessage());
+                }
+            }
+            
+            // Feed analog values to AVR ADC
+            feedAnalogToAVR();
         }
     }
     
     void doStep() {
         double pinResistance = 40;
-        double pullupResistance = 20000; // 20K pullup
+        double highZ = 1e9; // High impedance
         
-        for (int i = 0; i < 14; i++) {
-            if (pinModes[i] == OUTPUT) {
-                // Check if PWM is enabled for this pin
-                int pwmIdx = getPWMIndex(i);
-                if (pwmIdx >= 0 && pwmEnabled[pwmIdx]) {
-                    // Simulate PWM with average voltage
-                    double dutyCycle = pwmValues[pwmIdx] / 255.0;
-                    double targetVoltage = volts[N_GND] + vcc * dutyCycle;
-                    // Use low resistance to drive pin
-                    sim.stampResistor(nodes[N_VCC], nodes[i], 
-                        pinResistance * (1.0 / dutyCycle));
-                } else {
-                    // Normal digital output
-                    if (pinStates[i]) {
-                        sim.stampResistor(nodes[N_VCC], nodes[i], pinResistance);
-                    } else {
-                        sim.stampResistor(nodes[i], ground, pinResistance);
-                    }
-                }
-            } else if (pinModes[i] == INPUT_PULLUP) {
-                // Pullup resistor to Vcc
-                sim.stampResistor(nodes[N_VCC], nodes[i], pullupResistance);
+        // Stamp digital pins based on their state
+        for (int i = 0; i < 14; i++) { // D0-D13
+            if (pinStates[i]) {
+                // Pin is HIGH - connect to VCC through resistance
+                sim.stampResistor(nodes[N_VCC], nodes[i], pinResistance);
             } else {
-                // High impedance for normal inputs
-                sim.stampResistor(nodes[i], ground, 1e9);
+                // Pin is LOW - connect to GND through resistance
+                sim.stampResistor(nodes[i], ground, pinResistance);
             }
         }
         
-        // Analog pins when used as digital
+        // Analog pins - high impedance when used for ADC
         for (int i = 0; i < 6; i++) {
             int pinIdx = N_A0 + i;
-            int logicalPin = 14 + i;
-            if (pinModes[logicalPin] == OUTPUT) {
-                if (pinStates[logicalPin]) {
-                    sim.stampResistor(nodes[N_VCC], nodes[pinIdx], pinResistance);
-                } else {
-                    sim.stampResistor(nodes[pinIdx], ground, pinResistance);
+            sim.stampResistor(nodes[pinIdx], ground, highZ);
+        }
+    }
+    
+    // ===== AVR8JS INTEGRATION =====
+    
+    /**
+     * Load Arduino hex file and start AVR emulation
+     */
+    public void loadHexFile(String hexContent) {
+        try {
+            console("Loading Arduino hex file...");
+            
+            // Parse hex file to binary
+            Uint8Array program = HexParser.parseHex(hexContent);
+            
+            // Create AVR runner
+            avrRunner = new AVRRunner(program);
+            isRunning = true;
+            lastSimTime = sim.t;
+            
+            // Setup UART callback for Serial output
+            avrRunner.getUsart().setOnByteTransmit(new AVR8JS.ByteTransmitCallback() {
+                public void onByte(int byteValue) {
+                    char c = (char) byteValue;
+                    serialBuffer.append(c);
+                    console("Serial: " + c);
                 }
-            } else {
-                sim.stampResistor(nodes[pinIdx], ground, 1e9);
+            });
+            
+            // Setup Port B listener (D8-D13, mapped to bits 0-5 of Port B)
+            portBListener = new PortListener() {
+                public void onChange(int value, int oldValue) {
+                    // Port B bits 0-5 = Arduino D8-D13
+                    for (int i = 0; i < 6; i++) {
+                        pinStates[8 + i] = ((value >> i) & 1) == 1;
+                    }
+                }
+            };
+            avrRunner.getPortB().addListener(portBListener);
+            
+            // Setup Port C listener (A0-A5, can be used as digital)
+            portCListener = new PortListener() {
+                public void onChange(int value, int oldValue) {
+                    // Port C bits 0-5 = Arduino A0-A5 (pins 14-19)
+                    for (int i = 0; i < 6; i++) {
+                        pinStates[14 + i] = ((value >> i) & 1) == 1;
+                    }
+                }
+            };
+            avrRunner.getPortC().addListener(portCListener);
+            
+            // Setup Port D listener (D0-D7)
+            portDListener = new PortListener() {
+                public void onChange(int value, int oldValue) {
+                    // Port D = Arduino D0-D7
+                    for (int i = 0; i < 8; i++) {
+                        pinStates[i] = ((value >> i) & 1) == 1;
+                    }
+                }
+            };
+            avrRunner.getPortD().addListener(portDListener);
+            
+            console("Arduino program loaded successfully!");
+            console("AVR is now running at 16MHz");
+            
+        } catch (Exception e) {
+            console("Error loading hex file: " + e.getMessage());
+            isRunning = false;
+        }
+    }
+    
+    /**
+     * Feed analog values from circuit to AVR ADC registers
+     */
+    private void feedAnalogToAVR() {
+        if (avrRunner == null) return;
+        
+        // TODO: Write analog values to AVR ADC registers
+        // This requires writing to specific memory addresses in the AVR
+        // For now, the AVR reads whatever is in its ADC registers
+    }
+    
+    /**
+     * Stop AVR execution
+     */
+    public void stopAVR() {
+        if (avrRunner != null) {
+            try {
+                avrRunner.stop();
+            } catch (Exception e) {
+                console("Error stopping AVR: " + e.getMessage());
             }
         }
+        isRunning = false;
+        console("AVR stopped");
     }
     
-    // Helper to get PWM index for a pin
-    int getPWMIndex(int pin) {
-        switch(pin) {
-            case 3: return 0;
-            case 5: return 1;
-            case 6: return 2;
-            case 9: return 3;
-            case 10: return 4;
-            case 11: return 5;
-            default: return -1;
+    /**
+     * Reset AVR (stop and clear)
+     */
+    public void resetAVR() {
+        stopAVR();
+        avrRunner = null;
+        serialBuffer.setLength(0);
+        for (int i = 0; i < 20; i++) {
+            pinStates[i] = false;
         }
+        console("AVR reset");
     }
     
-    // ===== ARDUINO API =====
-    
-    void pinMode(int pin, int mode) {
-        if (pin >= 0 && pin < 20) {
-            pinModes[pin] = mode;
-        }
+    /**
+     * Check if AVR is running
+     */
+    public boolean isRunning() {
+        return isRunning && avrRunner != null;
     }
     
-    void digitalWrite(int pin, int value) {
-        if (pin >= 0 && pin < 20 && pinModes[pin] == OUTPUT) {
-            pinStates[pin] = (value == HIGH);
-            // Disable PWM if it was enabled
-            int pwmIdx = getPWMIndex(pin);
-            if (pwmIdx >= 0) {
-                pwmEnabled[pwmIdx] = false;
-            }
-        }
+    /**
+     * Get serial monitor output
+     */
+    public String getSerialOutput() {
+        return serialBuffer.toString();
     }
     
-    int digitalRead(int pin) {
-        if (pin >= 0 && pin < 20) {
-            return pinStates[pin] ? HIGH : LOW;
-        }
-        return LOW;
+    /**
+     * Clear serial buffer
+     */
+    public void clearSerialOutput() {
+        serialBuffer.setLength(0);
     }
     
-    int analogRead(int pin) {
-        // pin can be 0-5 for A0-A5, or 14-19 for same
-        if (pin >= 0 && pin < 6) {
-            return analogValues[pin];
-        } else if (pin >= 14 && pin < 20) {
-            return analogValues[pin - 14];
-        }
-        return 0;
-    }
+    /**
+     * Console logging
+     */
+    private native void console(String message) /*-{
+        console.log("[Arduino] " + message);
+    }-*/;
     
-    void analogWrite(int pin, int value) {
-        int pwmIdx = getPWMIndex(pin);
-        if (pwmIdx >= 0 && pinModes[pin] == OUTPUT) {
-            pwmValues[pwmIdx] = Math.max(0, Math.min(255, value));
-            pwmEnabled[pwmIdx] = true;
-        }
-    }
+    // ===== UI INTEGRATION =====
     
-    long millis() {
-        return simulationTime / 1000;
-    }
-    
-    long micros() {
-        return simulationTime;
-    }
-    
-    void delay(long ms) {
-        // Note: In simulation, delay is non-blocking
-        // This is just for API compatibility
-    }
-    
-    // Simplified serial output
-    void serialPrint(String str) {
-        serialBuffer.append(str);
-        System.out.println("Arduino Serial: " + str);
-    }
-    
-    void serialPrintln(String str) {
-        serialPrint(str + "\n");
-    }
-    
-    // ===== USER CODE =====
-    // Override this method to implement your Arduino sketch
-    void execute() {
-        // Example: Blink LED on D13
-        if ((millis() / 1000) % 2 == 0) {
-            pinMode(13, OUTPUT);
-            digitalWrite(13, HIGH);
+    @Override
+    public void getInfo(String[] arr) {
+        arr[0] = "Arduino Uno (ATmega328P)";
+        arr[1] = "Status: " + (isRunning ? "Running" : "Stopped");
+        arr[2] = "CPU: 16 MHz AVR";
+        arr[3] = "VCC = " + getVoltageText(vcc);
+        arr[4] = "Serial buffer: " + serialBuffer.length() + " bytes";
+        if (isRunning) {
+            arr[5] = "Click 'Edit' to view serial monitor";
         } else {
-            digitalWrite(13, LOW);
+            arr[5] = "Click 'Edit' to load hex file";
         }
     }
     
-    // Optional: setup() called once at start
-    void setup() {
-        // Override in subclass
+    @Override
+    public EditInfo getEditInfo(int n) {
+        if (n == 0) {
+            EditInfo ei = new EditInfo("", 0, -1, -1);
+            ei.button = new Button("Load Arduino Hex File");
+            return ei;
+        }
+        if (n == 1) {
+            EditInfo ei = new EditInfo("", 0, -1, -1);
+            ei.button = new Button("View Serial Monitor");
+            return ei;
+        }
+        if (n == 2 && isRunning) {
+            EditInfo ei = new EditInfo("", 0, -1, -1);
+            ei.button = new Button("Stop AVR");
+            return ei;
+        }
+        if (n == 3 && isRunning) {
+            EditInfo ei = new EditInfo("", 0, -1, -1);
+            ei.button = new Button("Reset AVR");
+            return ei;
+        }
+        return null;
     }
     
-    // Optional: loop() called repeatedly
-    void loop() {
-        // Override in subclass
+    @Override
+    public void setEditValue(int n, EditInfo ei) {
+        if (n == 0) {
+            new LoadArduinoHexDialog(this);
+        }
+        if (n == 1) {
+            new ArduinoSerialMonitorDialog(this);
+        }
+        if (n == 2) {
+            stopAVR();
+        }
+        if (n == 3) {
+            resetAVR();
+        }
     }
     
     int getPostCount() { return 22; }
