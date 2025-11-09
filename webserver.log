@@ -174,3 +174,4 @@
 172.31.229.32 - - [08/Nov/2025 20:45:35] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
 172.31.229.32 - - [08/Nov/2025 20:45:35] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
 172.31.229.32 - - [08/Nov/2025 20:45:35] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [08/Nov/2025 20:52:35] "GET /mosfet-beta.html HTTP/1.1" 200 -
