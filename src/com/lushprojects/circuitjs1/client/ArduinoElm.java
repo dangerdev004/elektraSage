@@ -37,6 +37,11 @@ class ArduinoElm extends ChipElm {
     boolean[] pinStates = new boolean[20];
     int[] analogValues = new int[6]; // 10-bit ADC (0-1023)
     
+    // UI / mode options
+    int vccChoiceIndex = 0; // 0 = 5V, 1 = 3.3V
+    boolean useFixedVcc = false; // when true, use selected VCC instead of circuit VCC node
+    boolean serialEnabled = true; // enable/disable serial output
+
     
     // Serial output buffer
     private StringBuilder serialBuffer = new StringBuilder();
@@ -53,6 +58,10 @@ class ArduinoElm extends ChipElm {
         for (int i = 0; i < 6; i++) {
             analogValues[i] = 0;
         }
+        // defaults for options
+        vccChoiceIndex = 0;
+        useFixedVcc = false;
+        serialEnabled = true;
     }
     
     String getChipName() { return "Arduino Uno"; }
@@ -136,7 +145,11 @@ class ArduinoElm extends ChipElm {
         // Read voltages
         double groundVolts = volts[N_GND];
         double vccVolts = volts[N_VCC];
-        vcc = vccVolts - groundVolts;
+        if (useFixedVcc) {
+            vcc = (vccChoiceIndex == 0) ? 5.0 : 3.3;
+        } else {
+            vcc = vccVolts - groundVolts;
+        }
         
         // Read analog input pins (A0-A5)
         for (int i = 0; i < 6; i++) {
@@ -172,14 +185,55 @@ class ArduinoElm extends ChipElm {
     
     
     
+    // ===== Edit dialog support (options/modes) =====
+
+    public EditInfo getEditInfo(int n) {
+        if (n == 0) {
+            EditInfo ei = new EditInfo("VCC selection", vccChoiceIndex, -1, -1);
+            ei.choice = new Choice();
+            ei.choice.add("5V");
+            ei.choice.add("3.3V");
+            ei.choice.select(vccChoiceIndex);
+            return ei;
+        }
+        if (n == 1) {
+            return EditInfo.createCheckbox("Use fixed VCC", useFixedVcc);
+        }
+        if (n == 2) {
+            return EditInfo.createCheckbox("Enable Serial Output", serialEnabled);
+        }
+        return super.getEditInfo(n-3);
+    }
+
+    public void setEditValue(int n, EditInfo ei) {
+        if (n == 0) {
+            vccChoiceIndex = ei.choice.getSelectedIndex();
+            if (useFixedVcc) {
+                vcc = (vccChoiceIndex == 0) ? 5.0 : 3.3;
+            }
+        } else if (n == 1) {
+            useFixedVcc = ei.checkbox.getState();
+            if (useFixedVcc) {
+                vcc = (vccChoiceIndex == 0) ? 5.0 : 3.3;
+            }
+        } else if (n == 2) {
+            serialEnabled = ei.checkbox.getState();
+            if (!serialEnabled)
+                serialBuffer.setLength(0);
+        } else {
+            super.setEditValue(n-3, ei);
+        }
+    }
+
     // ===== UI INTEGRATION =====
-    
+
     @Override
     public void getInfo(String[] arr) {
         arr[0] = "Arduino Uno (ATmega328P)";
         arr[1] = "CPU: 16 MHz AVR";
-        arr[2] = "VCC = " + getVoltageText(vcc);
-        arr[3] = "Serial buffer: " + serialBuffer.length() + " bytes";
+        String mode = useFixedVcc ? (vccChoiceIndex == 0 ? " (fixed 5V)" : " (fixed 3.3V)") : " (from circuit)";
+        arr[2] = "VCC = " + getVoltageText(vcc) + mode;
+        arr[3] = "Serial: " + (serialEnabled ? "enabled" : "disabled") + ", buffer=" + serialBuffer.length() + " bytes";
     }
     
    

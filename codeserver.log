@@ -1,12 +1,12 @@
 Turning off precompile in incremental mode.
 Super Dev Mode starting up
-   workDir: /tmp/gwt-codeserver-7741352744202855711.tmp
+   workDir: /tmp/gwt-codeserver-1342510048137316214.tmp
    Loading inherited module 'com.lushprojects.circuitjs1.circuitjs1'
       [WARN] Line 12: Setting configuration property named 'jsinterop.checks' in module 'com.lushprojects.circuitjs1.circuitjs1' that has not been previously defined
    Loading Java files in com.lushprojects.circuitjs1.circuitjs1.
    Ignored 80 units with compilation errors in first pass.
 Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-   Module setup completed in 12557 ms
+   Module setup completed in 10182 ms
 
 The code server is ready at http://172.31.229.32:9876/
 GET /recompile/circuitjs1
@@ -22,41 +22,27 @@ Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
                   [WARN] Detected warnings related to 'com.google.gwt.editor.client.SimpleBeanEditorDriver'.   Are validation-api-<version>.jar and validation-api-<version>-sources.jar on the classpath?
                   Specify -logLevel DEBUG to see all errors.
                   [WARN] Unknown type 'com.google.gwt.editor.client.SimpleBeanEditorDriver' specified in deferred binding rule
-         Unification traversed 29090 fields and methods and 2393 types. 2359 are considered part of the current module and 2359 had all of their fields and methods traversed.
+         Unification traversed 28911 fields and methods and 2371 types. 2337 are considered part of the current module and 2337 had all of their fields and methods traversed.
          Warnings in com/google/gwt/emul/java/util/Arrays.java
             [WARN] Line 1782: [unusable-by-js] Type of parameter 'd1' in 'int Arrays.1methodref$compare$Type.compare(long, long)' is not usable by but exposed to JavaScript.
             [WARN] Line 1782: [unusable-by-js] Type of parameter 'd2' in 'int Arrays.1methodref$compare$Type.compare(long, long)' is not usable by but exposed to JavaScript.
-         Warnings in com/lushprojects/circuitjs1/client/Microcontrollers/AVR8JS.java
-            [WARN] Line 87: [unusable-by-js] Return type of 'Uint8Array AVR8JS.CPU.getData()' is not usable by but exposed to JavaScript.
          [WARN] Suppress "[unusable-by-js]" warnings by adding a `@SuppressWarnings("unusable-by-js")` annotation to the corresponding member.
          Compiling 1 permutation
             Compiling permutation 0...
-            Linking per-type JS with 2338 new/changed types.
+            Linking per-type JS with 2316 new/changed types.
             Source Maps Enabled
          Compile of permutations succeeded
-         Compilation succeeded -- 7.059s
-      Linking into /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-2/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-2/extras/circuitjs1
+         Compilation succeeded -- 6.896s
+      Linking into /tmp/gwt-codeserver-1342510048137316214.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-2/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-1342510048137316214.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-2/extras/circuitjs1
          Link succeeded
-         Linking succeeded -- 0.495s
-      7.702s total -- Compile completed
+         Linking succeeded -- 0.373s
+      7.409s total -- Compile completed
 GET /recompile/circuitjs1
    Job com.lushprojects.circuitjs1.circuitjs1_1_1
       starting job: com.lushprojects.circuitjs1.circuitjs1_1_1
       binding: user.agent=safari
-      Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 80 units with compilation errors in first pass.
-Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         Unification traversed 2731 fields and methods and 1112 types. 8 are considered part of the current module and 26 had all of their fields and methods traversed.
-         Compiling 1 permutation
-            Compiling permutation 0...
-            Linking per-type JS with 8 new/changed types.
-            Source Maps Enabled
-         Compile of permutations succeeded
-         Compilation succeeded -- 10.685s
-      Linking into /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-3/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-3/extras/circuitjs1
-         Link succeeded
-         Linking succeeded -- 1.238s
-      13.803s total -- Compile completed
+      skipped compile because no input files have changed
+      0.069s total -- Compile completed
 GET /recompile/circuitjs1
    Job com.lushprojects.circuitjs1.circuitjs1_1_2
       starting job: com.lushprojects.circuitjs1.circuitjs1_1_2
@@ -64,283 +50,14 @@ GET /recompile/circuitjs1
       Compiling module com.lushprojects.circuitjs1.circuitjs1
          Ignored 80 units with compilation errors in first pass.
 Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         Unification traversed 2731 fields and methods and 1112 types. 8 are considered part of the current module and 26 had all of their fields and methods traversed.
-         Compiling 1 permutation
-            Compiling permutation 0...
-            Linking per-type JS with 8 new/changed types.
-            Source Maps Enabled
-         Compile of permutations succeeded
-         Compilation succeeded -- 4.175s
-      Linking into /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-4/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-4/extras/circuitjs1
-         Link succeeded
-         Linking succeeded -- 0.269s
-      4.909s total -- Compile completed
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_3
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_3
-      binding: user.agent=safari
-      Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 80 units with compilation errors in first pass.
-Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         Unification traversed 2731 fields and methods and 1112 types. 8 are considered part of the current module and 26 had all of their fields and methods traversed.
-         Compiling 1 permutation
-            Compiling permutation 0...
-            Linking per-type JS with 8 new/changed types.
-            Source Maps Enabled
-         Compile of permutations succeeded
-         Compilation succeeded -- 3.731s
-      Linking into /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-5/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-5/extras/circuitjs1
-         Link succeeded
-         Linking succeeded -- 0.294s
-      4.570s total -- Compile completed
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_4
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_4
-      binding: user.agent=safari
-      Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 80 units with compilation errors in first pass.
-Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         Unification traversed 2731 fields and methods and 1112 types. 8 are considered part of the current module and 26 had all of their fields and methods traversed.
-         Compiling 1 permutation
-            Compiling permutation 0...
-            Linking per-type JS with 8 new/changed types.
-            Source Maps Enabled
-         Compile of permutations succeeded
-         Compilation succeeded -- 2.662s
-      Linking into /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-6/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-6/extras/circuitjs1
-         Link succeeded
-         Linking succeeded -- 0.320s
-      3.362s total -- Compile completed
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_5
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_5
-      binding: user.agent=safari
-      Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 80 units with compilation errors in first pass.
-Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         Unification traversed 2731 fields and methods and 1112 types. 8 are considered part of the current module and 26 had all of their fields and methods traversed.
-         Compiling 1 permutation
-            Compiling permutation 0...
-            Linking per-type JS with 8 new/changed types.
-            Source Maps Enabled
-         Compile of permutations succeeded
-         Compilation succeeded -- 1.960s
-      Linking into /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-7/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-7/extras/circuitjs1
-         Link succeeded
-         Linking succeeded -- 0.125s
-      2.367s total -- Compile completed
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_6
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_6
-      binding: user.agent=safari
-      Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 80 units with compilation errors in first pass.
-Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         Unification traversed 2731 fields and methods and 1112 types. 8 are considered part of the current module and 26 had all of their fields and methods traversed.
-         Compiling 1 permutation
-            Compiling permutation 0...
-            Linking per-type JS with 8 new/changed types.
-            Source Maps Enabled
-         Compile of permutations succeeded
-         Compilation succeeded -- 2.262s
-      Linking into /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-8/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-8/extras/circuitjs1
-         Link succeeded
-         Linking succeeded -- 0.191s
-      2.710s total -- Compile completed
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_7
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_7
-      binding: user.agent=safari
-      Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 80 units with compilation errors in first pass.
-Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         Unification traversed 2731 fields and methods and 1112 types. 8 are considered part of the current module and 26 had all of their fields and methods traversed.
-         Compiling 1 permutation
-            Compiling permutation 0...
-            Linking per-type JS with 8 new/changed types.
-            Source Maps Enabled
-         Compile of permutations succeeded
-         Compilation succeeded -- 2.270s
-      Linking into /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-9/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-9/extras/circuitjs1
-         Link succeeded
-         Linking succeeded -- 0.222s
-      2.729s total -- Compile completed
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_8
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_8
-      binding: user.agent=safari
-      skipped compile because no input files have changed
-      0.058s total -- Compile completed
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_9
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_9
-      binding: user.agent=safari
-      skipped compile because no input files have changed
-      0.270s total -- Compile completed
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_10
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_10
-      binding: user.agent=safari
-      Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 80 units with compilation errors in first pass.
-Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         Unification traversed 605 fields and methods and 172 types. 0 are considered part of the current module and 8 had all of their fields and methods traversed.
-         Compiling 1 permutation
-            Compiling permutation 0...
-            Linking per-type JS with 0 new/changed types.
-            Source Maps Enabled
-         Compile of permutations succeeded
-         Compilation succeeded -- 5.422s
-      Linking into /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-12/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-12/extras/circuitjs1
-         Link succeeded
-         Linking succeeded -- 1.245s
-      8.181s total -- Compile completed
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_11
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_11
-      binding: user.agent=safari
-      Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 81 units with compilation errors in first pass.
-Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
-            [ERROR] Line 41: AVRRunner cannot be resolved to a type
-            [ERROR] Line 47: PortListener cannot be resolved to a type
-            [ERROR] Line 48: PortListener cannot be resolved to a type
-            [ERROR] Line 49: PortListener cannot be resolved to a type
-            [ERROR] Line 160: AVRRunner cannot be resolved to a type
-            [ERROR] Line 169: AVRRunner cannot be resolved to a type
-            [ERROR] Line 171: The method console(String) is undefined for the type ArduinoElm
-            [ERROR] Line 176: The method feedAnalogToAVR() is undefined for the type ArduinoElm
-         Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.ArduinoElm'
-            [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
-               [ERROR] Line 160: AVRRunner cannot be resolved to a type
-               [ERROR] Line 171: The method console(String) is undefined for the type ArduinoElm
-               [ERROR] Line 176: The method feedAnalogToAVR() is undefined for the type ArduinoElm
-               [ERROR] Line 47: PortListener cannot be resolved to a type
-               [ERROR] Line 169: AVRRunner cannot be resolved to a type
-               [ERROR] Line 49: PortListener cannot be resolved to a type
-               [ERROR] Line 48: PortListener cannot be resolved to a type
-               [ERROR] Line 41: AVRRunner cannot be resolved to a type
-         [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
-         Unification traversed 2410 fields and methods and 1071 types. 1 are considered part of the current module and 12 had all of their fields and methods traversed.
-         [WARN] Some stale types ([com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS$AVRRunner, com.lushprojects.circuitjs1.client.ArduinoElm$3, com.lushprojects.circuitjs1.client.ArduinoElm$4, com.lushprojects.circuitjs1.client.ArduinoElm$1, com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS$PortListener, com.lushprojects.circuitjs1.client.ArduinoElm$2, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog$3, com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS$ByteTransmitCallback, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog$2, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$3, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$4, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog$1, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$1, com.lushprojects.circuitjs1.client.Microcontrollers.HexParser, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$2, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog, com.lushprojects.circuitjs1.client.ArduinoElm]) were not reprocessed as was expected. This is either a compiler bug or a Generator has legitimately stopped creating these types.
-      [ERROR] Compiler returned false
-      [WARN] recompile failed
-      [WARN] continuing to serve previous version
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_12
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_12
-      binding: user.agent=safari
-      Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 81 units with compilation errors in first pass.
-Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
-            [ERROR] Line 150: isRunning cannot be resolved to a variable
-            [ERROR] Line 150: avrRunner cannot be resolved to a variable
-            [ERROR] Line 152: lastSimTime cannot be resolved to a variable
-            [ERROR] Line 153: lastSimTime cannot be resolved to a variable
-            [ERROR] Line 156: CPU_FREQ cannot be resolved to a variable
-            [ERROR] Line 159: avrRunner cannot be resolved
-            [ERROR] Line 161: The method console(String) is undefined for the type ArduinoElm
-            [ERROR] Line 166: The method feedAnalogToAVR() is undefined for the type ArduinoElm
-            [ERROR] Line 199: isRunning cannot be resolved to a variable
-            [ERROR] Line 203: isRunning cannot be resolved to a variable
-         Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.ArduinoElm'
-            [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
-               [ERROR] Line 152: lastSimTime cannot be resolved to a variable
-               [ERROR] Line 166: The method feedAnalogToAVR() is undefined for the type ArduinoElm
-               [ERROR] Line 199: isRunning cannot be resolved to a variable
-               [ERROR] Line 150: avrRunner cannot be resolved to a variable
-               [ERROR] Line 161: The method console(String) is undefined for the type ArduinoElm
-               [ERROR] Line 156: CPU_FREQ cannot be resolved to a variable
-               [ERROR] Line 153: lastSimTime cannot be resolved to a variable
-               [ERROR] Line 150: isRunning cannot be resolved to a variable
-               [ERROR] Line 159: avrRunner cannot be resolved
-               [ERROR] Line 203: isRunning cannot be resolved to a variable
-         [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
-         Unification traversed 2410 fields and methods and 1071 types. 1 are considered part of the current module and 12 had all of their fields and methods traversed.
-         [WARN] Some stale types ([com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS$AVRRunner, com.lushprojects.circuitjs1.client.ArduinoElm$3, com.lushprojects.circuitjs1.client.ArduinoElm$4, com.lushprojects.circuitjs1.client.ArduinoElm$1, com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS$PortListener, com.lushprojects.circuitjs1.client.ArduinoElm$2, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog$3, com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS$ByteTransmitCallback, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog$2, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$3, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$4, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog$1, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$1, com.lushprojects.circuitjs1.client.Microcontrollers.HexParser, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$2, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog, com.lushprojects.circuitjs1.client.ArduinoElm]) were not reprocessed as was expected. This is either a compiler bug or a Generator has legitimately stopped creating these types.
-      [ERROR] Compiler returned false
-      [WARN] recompile failed
-      [WARN] continuing to serve previous version
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_13
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_13
-      binding: user.agent=safari
-      Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 81 units with compilation errors in first pass.
-Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         Finding entry point classes
-            Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.circuitjs1'
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/circuitjs1.java'
-                  [ERROR] com.lushprojects.circuitjs1.client.CirSim cannot be resolved to a type
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/CirSim.java'
-                  [ERROR] Line 6248: ArduinoElm cannot be resolved to a type
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ScopePopupMenu.java'
-                  [ERROR] com.lushprojects.circuitjs1.client.Scope cannot be resolved to a type
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/CircuitElm.java'
-                  [ERROR] com.lushprojects.circuitjs1.client.CirSim cannot be resolved to a type
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/Scope.java'
-                  [ERROR] com.lushprojects.circuitjs1.client.CirSim cannot be resolved to a type
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ScopeElm.java'
-                  [ERROR] com.lushprojects.circuitjs1.client.Scope cannot be resolved to a type
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/Scrollbar.java'
-                  [ERROR] com.lushprojects.circuitjs1.client.CircuitElm cannot be resolved to a type
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ScrollValuePopup.java'
-                  [ERROR] com.lushprojects.circuitjs1.client.CirSim cannot be resolved to a type
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/Adjustable.java'
-                  [ERROR] com.lushprojects.circuitjs1.client.CirSim cannot be resolved to a type
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/LoadFile.java'
-                  [ERROR] com.lushprojects.circuitjs1.client.CirSim cannot be resolved to a type
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/SwitchElm.java'
-                  [ERROR] com.lushprojects.circuitjs1.client.CircuitElm cannot be resolved to a type
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/EditDialog.java'
-                  [ERROR] com.lushprojects.circuitjs1.client.CirSim cannot be resolved to a type
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/CircuitNode.java'
-                  [ERROR] com.lushprojects.circuitjs1.client.CircuitNodeLink cannot be resolved to a type
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ScopePropertiesDialog.java'
-                  [ERROR] com.lushprojects.circuitjs1.client.CirSim cannot be resolved to a type
-               [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/CircuitNodeLink.java'
-                  [ERROR] com.lushprojects.circuitjs1.client.CircuitElm cannot be resolved to a type
-      [ERROR] Compiler returned false
-      [WARN] recompile failed
-      [WARN] continuing to serve previous version
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_14
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_14
-      binding: user.agent=safari
-      Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 81 units with compilation errors in first pass.
-Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
-            [ERROR] Line 180: isRunning cannot be resolved to a variable
-            [ERROR] Line 184: isRunning cannot be resolved to a variable
-         Tracing compile failure path for type 'com.lushprojects.circuitjs1.client.ArduinoElm'
-            [ERROR] Errors in 'file:/src/src/com/lushprojects/circuitjs1/client/ArduinoElm.java'
-               [ERROR] Line 184: isRunning cannot be resolved to a variable
-               [ERROR] Line 180: isRunning cannot be resolved to a variable
-         [ERROR] Hint: Check the inheritance chain from your module; it may not be inheriting a required module or a module may not be adding its source path entries properly
-         Unification traversed 2410 fields and methods and 1071 types. 1 are considered part of the current module and 12 had all of their fields and methods traversed.
-         [WARN] Some stale types ([com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS$AVRRunner, com.lushprojects.circuitjs1.client.ArduinoElm$3, com.lushprojects.circuitjs1.client.ArduinoElm$4, com.lushprojects.circuitjs1.client.ArduinoElm$1, com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS$PortListener, com.lushprojects.circuitjs1.client.ArduinoElm$2, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog$3, com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS$ByteTransmitCallback, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog$2, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$3, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$4, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog$1, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$1, com.lushprojects.circuitjs1.client.Microcontrollers.HexParser, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$2, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog, com.lushprojects.circuitjs1.client.ArduinoElm]) were not reprocessed as was expected. This is either a compiler bug or a Generator has legitimately stopped creating these types.
-      [ERROR] Compiler returned false
-      [WARN] recompile failed
-      [WARN] continuing to serve previous version
-GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_15
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_15
-      binding: user.agent=safari
-      Compiling module com.lushprojects.circuitjs1.circuitjs1
-         Ignored 80 units with compilation errors in first pass.
-Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-         Unification traversed 2475 fields and methods and 1072 types. 2 are considered part of the current module and 13 had all of their fields and methods traversed.
-         [WARN] Some stale types ([com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS$AVRRunner, com.lushprojects.circuitjs1.client.ArduinoElm$3, com.lushprojects.circuitjs1.client.ArduinoElm$4, com.lushprojects.circuitjs1.client.ArduinoElm$1, com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS$PortListener, com.lushprojects.circuitjs1.client.ArduinoElm$2, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog$3, com.lushprojects.circuitjs1.client.Microcontrollers.AVR8JS$ByteTransmitCallback, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog$2, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$3, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$4, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog$1, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$1, com.lushprojects.circuitjs1.client.Microcontrollers.HexParser, com.lushprojects.circuitjs1.client.ArduinoSerialMonitorDialog$2, com.lushprojects.circuitjs1.client.LoadArduinoHexDialog]) were not reprocessed as was expected. This is either a compiler bug or a Generator has legitimately stopped creating these types.
+         Unification traversed 2494 fields and methods and 1081 types. 2 are considered part of the current module and 13 had all of their fields and methods traversed.
          Compiling 1 permutation
             Compiling permutation 0...
             Linking per-type JS with 2 new/changed types.
             Source Maps Enabled
          Compile of permutations succeeded
-         Compilation succeeded -- 1.635s
-      Linking into /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-17/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-7741352744202855711.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-17/extras/circuitjs1
+         Compilation succeeded -- 2.875s
+      Linking into /tmp/gwt-codeserver-1342510048137316214.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-4/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-1342510048137316214.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-4/extras/circuitjs1
          Link succeeded
-         Linking succeeded -- 0.147s
-      1.936s total -- Compile completed
+         Linking succeeded -- 0.157s
+      3.490s total -- Compile completed
