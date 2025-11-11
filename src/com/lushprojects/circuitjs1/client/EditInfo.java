@@ -46,6 +46,12 @@ class EditInfo {
 	    dimensionless = noSliders = true;
 	}
 
+	EditInfo(String n, TextArea ta) {
+	    name = n;
+	    textArea = ta;
+	    dimensionless = noSliders = true;
+	}
+
 	static EditInfo createCheckbox(String name, boolean flag) {
 	    EditInfo ei = new EditInfo("", 0, -1, -1);
 	    ei.checkbox = new Checkbox(name, flag);
