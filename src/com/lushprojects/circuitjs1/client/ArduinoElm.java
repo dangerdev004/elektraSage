@@ -5,13 +5,15 @@ import com.google.gwt.user.client.ui.Button;
 import java.util.ArrayList;
 import com.google.gwt.user.client.ui.TextArea;
 
+import com.google.gwt.user.client.ui.VerticalPanel;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.Button;
+
+
 /**
- * Arduino Uno element with AVR8JS emulation (GWT JSNI bridge)
- * Runs real Arduino code compiled to Intel HEX files.
- *
- * Notes:
- * - Ensure avr8js.umd.js and avr-bridge.js are loaded before circuitjs1.nocache.js
- * - avr-bridge.js must expose window.AVRBridge with proper API
+ * Arduino Uno element with high-level behavioral simulation
+ * Uses JavaScript-based setup/loop code to model Arduino behavior
+ * without cycle-accurate AVR emulation.
  */
 class ArduinoElm extends ChipElm {
     // Pin indices for Arduino Uno
@@ -45,26 +47,18 @@ class ArduinoElm extends ChipElm {
     // UI / mode options
     int vccChoiceIndex = 0; // 0 = 5V, 1 = 3.3V
     boolean useFixedVcc = false;
-    boolean serialEnabled = true;
-
-    // Serial output buffer
-    private StringBuilder serialBuffer = new StringBuilder();
+    
+    // Behavioral mode fields
+    private String behavioralId = null;
+    private String arduinoSketch = "// Blink Example\nvoid setup() {\n  pinMode(13, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(13, HIGH);\n  delay(1000);\n  digitalWrite(13, LOW);\n  delay(1000);\n}";
+    private String setupCode = "";
+    private String loopCode = "";
+    private double[] behavioralPinVoltages = new double[20]; // target voltages from JS
+    private int exampleIndex = 0; // 0=Blink, 1=Fade, 2=Button
 
     // Circuit properties
     int ground;
     double vcc = 5.0;
-    TextArea code = new TextArea();
-
-    // AVR/GWT bridge
-    private JavaScriptObject avr = null;
-    private double clockHz = 16_000_000;
-    private double cycleAcc = 0.0;
-    private String loadedHexText = null;
-
-    // Cached port values
-    private int portBValue = 0;
-    private int portCValue = 0;
-    private int portDValue = 0;
 
     public ArduinoElm(int xx, int yy) {
         super(xx, yy);
@@ -73,7 +67,7 @@ class ArduinoElm extends ChipElm {
 
         vccChoiceIndex = 0;
         useFixedVcc = false;
-        serialEnabled = true;
+        transpileArduinoCode();
     }
 
     String getChipName() { return "Arduino Uno"; }
@@ -126,7 +120,7 @@ class ArduinoElm extends ChipElm {
     public int getVoltageSourceCount() { return 0; }
 
     void stamp() {
-        initAvrIfNeeded();
+        initBehavioralMode();
         ground = nodes[N_GND];
 
         // Stamp all pins as non-linear
@@ -180,21 +174,19 @@ class ArduinoElm extends ChipElm {
         double pinResistance = 40;
         double highZ = 1e9;
 
-        // Run AVR cycles
-        double dt = sim.timeStep;
-        cycleAcc += clockHz * dt;
-        int run = (int) Math.floor(cycleAcc);
-        if (run > 0 && avr != null) {
-            cycleAcc -= run;
-            avrStep(avr, run);
-        }
-
-        // Stamp digital pins
+        // Behavioral mode: apply voltages set by JavaScript
         for (int i = 0; i < 14; i++) {
-            if (pinStates[i]) {
+            double targetV = behavioralPinVoltages[i];
+            // Drive pin based on target voltage
+            if (targetV > vcc * 0.6) {
+                // High - connect to VCC through resistance
                 sim.stampResistor(nodes[N_VCC], nodes[i], pinResistance);
-            } else {
+            } else if (targetV < vcc * 0.4) {
+                // Low - connect to ground through resistance
                 sim.stampResistor(nodes[i], ground, pinResistance);
+            } else {
+                // Float/analog - high impedance
+                sim.stampResistor(nodes[i], ground, highZ);
             }
         }
 
@@ -203,166 +195,66 @@ class ArduinoElm extends ChipElm {
             int pinIdx = N_A0 + i;
             sim.stampResistor(nodes[pinIdx], ground, highZ);
         }
-
-        // Sample digital inputs
-        for (int pd = 0; pd <= 7; pd++) {
-            int pinIndex = pd;
-            double vin = volts[pinIndex];
-            boolean high = vin > (0.6 * vcc);
-            if (avr != null) {
-                avrSetInputBit(avr, "D", pd, high);
-            }
-        }
     }
 
-    // ===== JSNI: Bridge to AVRBridge =====
-    private static native JavaScriptObject avrCreate(double clockHz) /*-{
-      try {
-        if (!$wnd.AVRBridge || !$wnd.AVRBridge.create) {
-          console.error("AVRBridge not found. Ensure avr-bridge.js is loaded.");
-          return null;
+
+    
+    // Called from JS behavioral MCU to set pin voltage
+    public void setBehavioralPinVoltage(int pinIdx, double voltage) {
+        if (pinIdx >= 0 && pinIdx < behavioralPinVoltages.length) {
+            behavioralPinVoltages[pinIdx] = voltage;
         }
-        return $wnd.AVRBridge.create({ clockHz: clockHz });
-      } catch (e) {
-        console.error("avrCreate error:", e);
-        return null;
-      }
-    }-*/;
+    }
+    
+    // Get voltage at a specific pin (for JSNI bridge)
+    public double getPinVoltage(int pinIdx) {
+        if (pinIdx >= 0 && pinIdx < volts.length) {
+            return volts[pinIdx];
+        }
+        return 0.0;
+    }
 
-    private static native void avrLoadHex(JavaScriptObject avr, String hex) /*-{
-      if (!avr || !avr.loadHex) {
-        console.error("AVR instance or loadHex method not available");
-        return;
-      }
-      try {
-        avr.loadHex(hex);
-      } catch (e) {
-        console.error("avrLoadHex error:", e);
-      }
-    }-*/;
 
-    private static native void avrStep(JavaScriptObject avr, int cycles) /*-{
-      if (!avr || !avr.step) return;
-      try {
-        avr.step(cycles);
-      } catch (e) {
-        console.error("avrStep error:", e);
-      }
-    }-*/;
-
-    private static native void avrSetCallbacks(JavaScriptObject avr, ArduinoElm self) /*-{
-      if (!avr || !avr.setCallbacks) {
-        console.error("AVR instance or setCallbacks method not available");
-        return;
-      }
-      try {
-        avr.setCallbacks({
-          onPortBWrite: $entry(function (v) {
-            self.@com.lushprojects.circuitjs1.client.ArduinoElm::onPortBWrite(I)(v);
-          }),
-          onPortCWrite: $entry(function (v) {
-            self.@com.lushprojects.circuitjs1.client.ArduinoElm::onPortCWrite(I)(v);
-          }),
-          onPortDWrite: $entry(function (v) {
-            self.@com.lushprojects.circuitjs1.client.ArduinoElm::onPortDWrite(I)(v);
-          }),
-          onUsartTx: $entry(function (b) {
-            self.@com.lushprojects.circuitjs1.client.ArduinoElm::onUsartTx(I)(b);
-          }),
-          onAdcRead: $entry(function (ch) {
-            return self.@com.lushprojects.circuitjs1.client.ArduinoElm::onAdcRead(I)(ch);
-          })
-        });
-      } catch (e) {
-        console.error("avrSetCallbacks error:", e);
-      }
-    }-*/;
-
-    private static native void avrSetInputBit(JavaScriptObject avr, String port, int bit, boolean high) /*-{
-      if (!avr || !avr.setInputBit) return;
-      try {
-        avr.setInputBit(port, bit, high);
-      } catch (e) {
-        console.error("avrSetInputBit error:", e);
-      }
-    }-*/;
-
-    private void initAvrIfNeeded() {
-        if (avr != null) return;
-        
+    private void initBehavioralMode() {
+        if (behavioralId != null) return;
         try {
-            avr = avrCreate(clockHz);
-            if (avr == null) {
-                CirSim.console("Failed to create AVR instance - check console");
-                return;
-            }
+            // Register this instance for callbacks
+            ArduinoElmBehavioral.setCurrentBehavioralArduino(this);
             
-            avrSetCallbacks(avr, this);
-
-            String hex = (this.loadedHexText != null && this.loadedHexText.length() > 0)
-                    ? this.loadedHexText
-                    : ":020000040000FA\n:00000001FF"; // minimal placeholder
-            avrLoadHex(avr, hex);
+            // Bind circuit adapter on first use
+            ArduinoElmBehavioral.jsBindCircuitAdapter();
+            
+            // Build pin map: nodes for D0-D13, A0-A5
+            int[] pinMap = new int[20];
+            for (int i = 0; i < 14; i++) pinMap[i] = nodes[i]; // D0-D13
+            for (int i = 0; i < 6; i++) pinMap[14 + i] = nodes[N_A0 + i]; // A0-A5
+            
+            behavioralId = ArduinoElmBehavioral.jsCreateBehavioralMCU(
+                pinMap, setupCode, loopCode, 20, 
+                "arduino-" + System.identityHashCode(this)
+            );
+            ArduinoElmBehavioral.jsStartBehavioralMCU(behavioralId);
+            CirSim.console("Behavioral MCU started: " + behavioralId);
         } catch (Exception e) {
-            CirSim.console("Error initializing AVR: " + e.getMessage());
+            CirSim.console("Error initializing behavioral mode: " + e.getMessage());
         }
     }
 
-    // ===== Callbacks from JavaScript =====
-    private void onPortBWrite(int value) {
-        portBValue = value & 0xFF;
-        for (int bit = 0; bit <= 5; bit++) {
-            int digitalPin = N_D8 + bit;
-            if (digitalPin < pinStates.length) {
-                pinStates[digitalPin] = ((portBValue >> bit) & 1) != 0;
-            }
-        }
-    }
-
-    private void onPortCWrite(int value) {
-        portCValue = value & 0xFF;
-    }
-
-    private void onPortDWrite(int value) {
-        portDValue = value & 0xFF;
-        for (int bit = 0; bit <= 7; bit++) {
-            int digitalPin = N_D0 + bit;
-            if (digitalPin < pinStates.length) {
-                pinStates[digitalPin] = ((portDValue >> bit) & 1) != 0;
-            }
-        }
-    }
-
-    private void onUsartTx(int byteVal) {
-        if (serialEnabled) {
-            serialBuffer.append((char)(byteVal & 0xFF));
-            if (serialBuffer.length() > 4096) {
-                serialBuffer.delete(0, serialBuffer.length() - 4096);
-            }
-        }
-    }
-
-    private int onAdcRead(int channel) {
-        if (channel < 0 || channel > 5) return 0;
-        
-        int pinIndex = N_A0 + channel;
-        double v = volts[pinIndex];
-        double groundVolts = volts[N_GND];
-        double valueV = Math.max(0, Math.min(v - groundVolts, vcc));
-        int adc = (int)Math.round(1023.0 * (valueV / vcc));
-        return adc & 0x3FF;
-    }
-
-    public void setFirmwareHex(String hex) {
-        this.loadedHexText = hex;
-        if (avr != null && hex != null && hex.length() > 0) {
-            avrLoadHex(avr, hex);
-        }
-    }
 
     // ===== Edit dialog =====
     public EditInfo getEditInfo(int n) {
         if (n == 0) {
+            EditInfo ei = new EditInfo("Load Example", exampleIndex, -1, -1);
+            ei.choice = new Choice();
+            ei.choice.add("Blink (Pin 13)");
+            ei.choice.add("Fade (Pin 9)");
+            ei.choice.add("Button (Pin 2->13)");
+            ei.choice.add("AnalogRead (A0->13)");
+            ei.choice.add("Custom");
+            ei.choice.select(exampleIndex);
+            return ei;
+        }
+        if (n == 1) {
             EditInfo ei = new EditInfo("VCC selection", vccChoiceIndex, -1, -1);
             ei.choice = new Choice();
             ei.choice.add("5V");
@@ -370,43 +262,90 @@ class ArduinoElm extends ChipElm {
             ei.choice.select(vccChoiceIndex);
             return ei;
         }
-        if (n == 1) {
+        if (n == 2) {
             return EditInfo.createCheckbox("Use fixed VCC", useFixedVcc);
         }
-        if (n == 2) {
-            return EditInfo.createCheckbox("Enable Serial Output", serialEnabled);
-        }
         if (n == 3) {
-            return new EditInfo("Code: ", code).
-                    setDimensionless();
+            TextArea sketchArea = new TextArea();
+            sketchArea.setText(arduinoSketch);
+            sketchArea.setVisibleLines(20);
+            sketchArea.setCharacterWidth(60);
+            EditInfo ei = new EditInfo("Arduino Sketch (C++)", 0);
+            ei.textArea = sketchArea;
+            return ei;
         }
+
         return null;
     }
 
     public void setEditValue(int n, EditInfo ei) {
         if (n == 0) {
+            int newExample = ei.choice.getSelectedIndex();
+            if (newExample != exampleIndex) {
+                exampleIndex = newExample;
+                loadExample(exampleIndex);
+                transpileArduinoCode();
+                restartBehavioralMCU();
+            }
+        } else if (n == 1) {
             vccChoiceIndex = ei.choice.getSelectedIndex();
             if (useFixedVcc) {
                 vcc = (vccChoiceIndex == 0) ? 5.0 : 3.3;
             }
-        } else if (n == 1) {
+        } else if (n == 2) {
             useFixedVcc = ei.checkbox.getState();
             if (useFixedVcc) {
                 vcc = (vccChoiceIndex == 0) ? 5.0 : 3.3;
             }
-        } else if (n == 2) {
-            serialEnabled = ei.checkbox.getState();
-            if (!serialEnabled) serialBuffer.setLength(0);
+        } else if (n == 3 && ei.textArea != null) {
+            arduinoSketch = ei.textArea.getText();
+            transpileArduinoCode();
+            restartBehavioralMCU();
         }
+    }
+
+    private void loadExample(int index) {
+        switch(index) {
+            case 0: // Blink
+                arduinoSketch = "// Blink Example\nvoid setup() {\n  pinMode(13, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(13, HIGH);\n  delay(1000);\n  digitalWrite(13, LOW);\n  delay(1000);\n}";
+                break;
+            case 1: // Fade
+                arduinoSketch = "// Fade Example\nint brightness = 0;\nint fadeAmount = 5;\n\nvoid setup() {\n  pinMode(9, OUTPUT);\n}\n\nvoid loop() {\n  analogWrite(9, brightness);\n  brightness += fadeAmount;\n  if (brightness <= 0 || brightness >= 255) {\n    fadeAmount = -fadeAmount;\n  }\n  delay(30);\n}";
+                break;
+            case 2: // Button
+                arduinoSketch = "// Button Example\nint buttonPin = 2;\nint ledPin = 13;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n  pinMode(buttonPin, INPUT);\n}\n\nvoid loop() {\n  int buttonState = digitalRead(buttonPin);\n  digitalWrite(ledPin, buttonState);\n}";
+                break;
+            case 3: // AnalogRead
+                arduinoSketch = "// AnalogRead Example\nint sensorPin = A0;\nint ledPin = 13;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n}\n\nvoid loop() {\n  int sensorValue = analogRead(sensorPin);\n  if (sensorValue > 512) {\n    digitalWrite(ledPin, HIGH);\n  } else {\n    digitalWrite(ledPin, LOW);\n  }\n  delay(100);\n}";
+                break;
+        }
+    }
+    
+    private void transpileArduinoCode() {
+        String[] result = ArduinoElmBehavioral.transpileArduinoToJS(arduinoSketch);
+        setupCode = result[0];
+        loopCode = result[1];
+        
+        // Log transpiled code for debugging
+        CirSim.console("=== Arduino Sketch Transpiled ===");
+        CirSim.console("Setup JS: " + setupCode);
+        CirSim.console("Loop JS: " + loopCode);
+    }
+    
+    private void restartBehavioralMCU() {
+        if (behavioralId != null) {
+            ArduinoElmBehavioral.jsDestroyBehavioralMCU(behavioralId);
+            behavioralId = null;
+        }
+        initBehavioralMode();
     }
 
     @Override
     public void getInfo(String[] arr) {
-        arr[0] = "Arduino Uno (ATmega328P)";
-        arr[1] = "CPU: 16 MHz AVR";
+        arr[0] = "Arduino Uno (High-Level Simulation)";
         String mode = useFixedVcc ? (vccChoiceIndex == 0 ? " (fixed 5V)" : " (fixed 3.3V)") : " (from circuit)";
-        arr[2] = "VCC = " + getVoltageText(vcc) + mode;
-        arr[3] = "Serial: " + (serialEnabled ? "enabled" : "disabled") + ", buffer=" + serialBuffer.length() + " bytes";
+        arr[1] = "VCC = " + getVoltageText(vcc) + mode;
+        arr[2] = "Setup/Loop: JavaScript-based behavior";
     }
 
     int getDumpType() { return 400; }
