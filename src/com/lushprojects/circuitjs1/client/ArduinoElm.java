@@ -1,22 +1,15 @@
 package com.lushprojects.circuitjs1.client;
 
-import com.google.gwt.core.client.JavaScriptObject;
-import com.google.gwt.user.client.ui.Button;
-import java.util.ArrayList;
 import com.google.gwt.user.client.ui.TextArea;
-
-import com.google.gwt.user.client.ui.VerticalPanel;
-import com.google.gwt.user.client.ui.Label;
-import com.google.gwt.user.client.ui.Button;
-
+import java.util.ArrayList;
 
 /**
- * Arduino Uno element with high-level behavioral simulation
- * Uses JavaScript-based setup/loop code to model Arduino behavior
- * without cycle-accurate AVR emulation.
+ * Updated ArduinoElm that integrates a Java-side ArduinoRuntime.
+ * - Removes JS behavioral dependency
+ * - Adds runtime integration
+ * - Keeps original pin mapping & UI
  */
 class ArduinoElm extends ChipElm {
-    // Pin indices for Arduino Uno
     final int N_D0 = 0;
     final int N_D1 = 1;
     final int N_D2 = 2;
@@ -40,34 +33,43 @@ class ArduinoElm extends ChipElm {
     final int N_VCC = 20;
     final int N_GND = 21;
 
-    // Pin state tracking (digital outputs)
-    boolean[] pinStates = new boolean[20];
-    int[] analogValues = new int[6]; // 10-bit ADC (0-1023)
+    // pins state
+    boolean[] pinStates = new boolean[20];      // logical HIGH/LOW (for convenience)
+    int[] analogValues = new int[6];            // A0..A5 0..1023
 
-    // UI / mode options
-    int vccChoiceIndex = 0; // 0 = 5V, 1 = 3.3V
+    // hardware model
+    private double[] desiredVoltages = new double[20]; // desired output voltages from runtime (V)
+    private int[] pinMode = new int[20]; // 0 = INPUT, 1 = OUTPUT, 2 = INPUT_PULLUP
+
+    int vccChoiceIndex = 0;
     boolean useFixedVcc = false;
-    
-    // Behavioral mode fields
-    private String behavioralId = null;
+
     private String arduinoSketch = "// Blink Example\nvoid setup() {\n  pinMode(13, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(13, HIGH);\n  delay(1000);\n  digitalWrite(13, LOW);\n  delay(1000);\n}";
     private String setupCode = "";
     private String loopCode = "";
-    private double[] behavioralPinVoltages = new double[20]; // target voltages from JS
-    private int exampleIndex = 0; // 0=Blink, 1=Fade, 2=Button
+    private int exampleIndex = 0;
 
-    // Circuit properties
     int ground;
     double vcc = 5.0;
 
+    // The new runtime (the Arduino "brain")
+    private ArduinoRuntime runtime;
+
     public ArduinoElm(int xx, int yy) {
         super(xx, yy);
-        for (int i = 0; i < 20; i++) pinStates[i] = false;
+        for (int i = 0; i < 20; i++) {
+            pinStates[i] = false;
+            desiredVoltages[i] = 0.0;
+            pinMode[i] = 0; // default INPUT
+        }
         for (int i = 0; i < 6; i++) analogValues[i] = 0;
 
         vccChoiceIndex = 0;
         useFixedVcc = false;
-        transpileArduinoCode();
+
+        // create runtime and load simple example IR
+        runtime = new ArduinoRuntime(this);
+        runtime.loadExample(exampleIndex); // loads builtin example like Blink
     }
 
     String getChipName() { return "Arduino Uno"; }
@@ -120,10 +122,9 @@ class ArduinoElm extends ChipElm {
     public int getVoltageSourceCount() { return 0; }
 
     void stamp() {
-        initBehavioralMode();
+        // still stamp nonlinear for each pin so solver handles it
         ground = nodes[N_GND];
 
-        // Stamp all pins as non-linear
         for (int i = 0; i < 20; i++) {
             sim.stampNonLinear(nodes[i]);
         }
@@ -174,72 +175,110 @@ class ArduinoElm extends ChipElm {
         double pinResistance = 40;
         double highZ = 1e9;
 
-        // Behavioral mode: apply voltages set by JavaScript
-        for (int i = 0; i < 14; i++) {
-            double targetV = behavioralPinVoltages[i];
-            // Drive pin based on target voltage
-            if (targetV > vcc * 0.6) {
-                // High - connect to VCC through resistance
-                sim.stampResistor(nodes[N_VCC], nodes[i], pinResistance);
-            } else if (targetV < vcc * 0.4) {
-                // Low - connect to ground through resistance
-                sim.stampResistor(nodes[i], ground, pinResistance);
-            } else {
-                // Float/analog - high impedance
+        // Advance runtime: 1 ms per doStep
+        runtime.advanceTimeMillis(1);
+        runtime.step(50); // run up to 50 instructions per simulator step
+
+        // Use desiredVoltages & pinMode to stamp resistors to VCC or GND
+        for (int i = 0; i < 14; i++) { // only digital pins D0..D13
+            double targetV = desiredVoltages[i];
+            if (pinMode[i] == ArduinoRuntime.PINMODE_OUTPUT) {
+                // Output: drive toward target voltage through a small series (pinResistance)
+                if (targetV > vcc * 0.6) {
+                    // HIGH
+                    sim.stampResistor(nodes[N_VCC], nodes[i], pinResistance);
+                } else if (targetV < vcc * 0.4) {
+                    // LOW
+                    sim.stampResistor(nodes[i], ground, pinResistance);
+                } else {
+                    // if target is analog mid-level, drive with a resistor to that voltage approximated by dividing
+                    // simpler: stamp a resistor to ground and VCC ratio (skip complexity for now)
+                    sim.stampResistor(nodes[i], ground, highZ);
+                }
+            } else if (pinMode[i] == ArduinoRuntime.PINMODE_INPUT_PULLUP) {
+                // weak pull-up to VCC
+                sim.stampResistor(nodes[N_VCC], nodes[i], 10000.0); // 10k pull-up
+            } else { // INPUT
                 sim.stampResistor(nodes[i], ground, highZ);
             }
         }
 
-        // Analog pins high-Z
+        // Analog pins: let circuit set them (high impedance) unless the runtime uses analogWrite (PWM)
         for (int i = 0; i < 6; i++) {
             int pinIdx = N_A0 + i;
             sim.stampResistor(nodes[pinIdx], ground, highZ);
         }
     }
 
-
-    
-    // Called from JS behavioral MCU to set pin voltage
-    public void setBehavioralPinVoltage(int pinIdx, double voltage) {
-        if (pinIdx >= 0 && pinIdx < behavioralPinVoltages.length) {
-            behavioralPinVoltages[pinIdx] = voltage;
-        }
-    }
-    
-    // Get voltage at a specific pin (for JSNI bridge)
-    public double getPinVoltage(int pinIdx) {
-        if (pinIdx >= 0 && pinIdx < volts.length) {
-            return volts[pinIdx];
-        }
-        return 0.0;
-    }
-
-
-    private void initBehavioralMode() {
-        if (behavioralId != null) return;
+   
+    private void compileAndLoadCustomSketch() {
         try {
-            // Register this instance for callbacks
-            ArduinoElmBehavioral.setCurrentBehavioralArduino(this);
-            
-            // Bind circuit adapter on first use
-            ArduinoElmBehavioral.jsBindCircuitAdapter();
-            
-            // Build pin map: nodes for D0-D13, A0-A5
-            int[] pinMap = new int[20];
-            for (int i = 0; i < 14; i++) pinMap[i] = nodes[i]; // D0-D13
-            for (int i = 0; i < 6; i++) pinMap[14 + i] = nodes[N_A0 + i]; // A0-A5
-            
-            behavioralId = ArduinoElmBehavioral.jsCreateBehavioralMCU(
-                pinMap, setupCode, loopCode, 20, 
-                "arduino-" + System.identityHashCode(this)
-            );
-            ArduinoElmBehavioral.jsStartBehavioralMCU(behavioralId);
-            CirSim.console("Behavioral MCU started: " + behavioralId);
-        } catch (Exception e) {
-            CirSim.console("Error initializing behavioral mode: " + e.getMessage());
+            // 1. Parse
+            AST.Program prog = ArduinoParser.parseProgram(arduinoSketch);
+
+            // 2. Compile
+            ArduinoCompiler.CompileResult res = ArduinoCompiler.compile(prog);
+
+            // 3. Load into runtime
+            runtime.setupInstrs.clear();
+            runtime.loopInstrs.clear();
+            runtime.setupInstrs.addAll(res.setup);
+            runtime.loopInstrs.addAll(res.loop);
+
+            // 4. Reset runtime
+            runtime.pc = 0;
+            runtime.setupDone = false;
+
+            CirSim.console("Custom sketch compiled & loaded successfully.");
+        }
+        catch (Exception e) {
+            CirSim.console("Error compiling sketch: " + e.getMessage());
         }
     }
 
+
+    // Methods used by the runtime to interact with hardware ----------------
+
+    /**
+     * Read the instantaneous voltage on the Arduino pin (volts[] is maintained by CirSim).
+     * @param arduinoPin a logical pin number 0..19 (D0..D13, A0..A5)
+     * @return voltage measured relative to ground
+     */
+    public double readPinVoltage(int arduinoPin) {
+        if (arduinoPin < 0 || arduinoPin >= 20) return 0.0;
+        int nodeIndex = (arduinoPin < 14) ? arduinoPin : (N_A0 + (arduinoPin - 14));
+        // volts[] is available in ChipElm
+        return volts[nodeIndex];
+    }
+
+    /**
+     * Request the hardware to drive a pin to a desired voltage. The actual stamping happens
+     * during doStep() so the circuit solver resolves currents accordingly.
+     * @param arduinoPin 0..19
+     * @param voltage volts (0..vcc)
+     */
+    public void writePinVoltage(int arduinoPin, double voltage) {
+        if (arduinoPin < 0 || arduinoPin >= 20) return;
+        desiredVoltages[arduinoPin] = voltage;
+        // for convenience also set logical state
+        pinStates[arduinoPin] = voltage > (vcc * 0.6);
+    }
+
+    /**
+     * Set pin mode: 0 INPUT, 1 OUTPUT, 2 INPUT_PULLUP
+     */
+    public void setPinMode(int arduinoPin, int mode) {
+        if (arduinoPin < 0 || arduinoPin >= 20) return;
+        pinMode[arduinoPin] = mode;
+    }
+
+    /**
+     * Return the analog value (0..1023) sampled by startIteration
+     */
+    public int getAnalogValue(int analogIndex) {
+        if (analogIndex < 0 || analogIndex >= 6) return 0;
+        return analogValues[analogIndex];
+    }
 
     // ===== Edit dialog =====
     public EditInfo getEditInfo(int n) {
@@ -250,7 +289,7 @@ class ArduinoElm extends ChipElm {
             ei.choice.add("Fade (Pin 9)");
             ei.choice.add("Button (Pin 2->13)");
             ei.choice.add("AnalogRead (A0->13)");
-            ei.choice.add("Custom");
+            ei.choice.add("Custom Sketch");
             ei.choice.select(exampleIndex);
             return ei;
         }
@@ -283,9 +322,11 @@ class ArduinoElm extends ChipElm {
             int newExample = ei.choice.getSelectedIndex();
             if (newExample != exampleIndex) {
                 exampleIndex = newExample;
-                loadExample(exampleIndex);
-                transpileArduinoCode();
-                restartBehavioralMCU();
+                if (exampleIndex == 4) { // assuming “Custom Sketch” is index 4
+                    compileAndLoadCustomSketch();
+                } else {
+                    runtime.loadExample(exampleIndex);
+                }
             }
         } else if (n == 1) {
             vccChoiceIndex = ei.choice.getSelectedIndex();
@@ -299,45 +340,12 @@ class ArduinoElm extends ChipElm {
             }
         } else if (n == 3 && ei.textArea != null) {
             arduinoSketch = ei.textArea.getText();
-            transpileArduinoCode();
-            restartBehavioralMCU();
+             if (exampleIndex == 4) { // custom sketch selected
+                compileAndLoadCustomSketch();
+             }
+            // For now we do not parse C++; you can later add parser to convert to IR and load it.
+            // To avoid surprising behavior, we keep UI editable but do not auto-transpile here.
         }
-    }
-
-    private void loadExample(int index) {
-        switch(index) {
-            case 0: // Blink
-                arduinoSketch = "// Blink Example\nvoid setup() {\n  pinMode(13, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(13, HIGH);\n  delay(1000);\n  digitalWrite(13, LOW);\n  delay(1000);\n}";
-                break;
-            case 1: // Fade
-                arduinoSketch = "// Fade Example\nint brightness = 0;\nint fadeAmount = 5;\n\nvoid setup() {\n  pinMode(9, OUTPUT);\n}\n\nvoid loop() {\n  analogWrite(9, brightness);\n  brightness += fadeAmount;\n  if (brightness <= 0 || brightness >= 255) {\n    fadeAmount = -fadeAmount;\n  }\n  delay(30);\n}";
-                break;
-            case 2: // Button
-                arduinoSketch = "// Button Example\nint buttonPin = 2;\nint ledPin = 13;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n  pinMode(buttonPin, INPUT);\n}\n\nvoid loop() {\n  int buttonState = digitalRead(buttonPin);\n  digitalWrite(ledPin, buttonState);\n}";
-                break;
-            case 3: // AnalogRead
-                arduinoSketch = "// AnalogRead Example\nint sensorPin = A0;\nint ledPin = 13;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n}\n\nvoid loop() {\n  int sensorValue = analogRead(sensorPin);\n  if (sensorValue > 512) {\n    digitalWrite(ledPin, HIGH);\n  } else {\n    digitalWrite(ledPin, LOW);\n  }\n  delay(100);\n}";
-                break;
-        }
-    }
-    
-    private void transpileArduinoCode() {
-        String[] result = ArduinoElmBehavioral.transpileArduinoToJS(arduinoSketch);
-        setupCode = result[0];
-        loopCode = result[1];
-        
-        // Log transpiled code for debugging
-        CirSim.console("=== Arduino Sketch Transpiled ===");
-        CirSim.console("Setup JS: " + setupCode);
-        CirSim.console("Loop JS: " + loopCode);
-    }
-    
-    private void restartBehavioralMCU() {
-        if (behavioralId != null) {
-            ArduinoElmBehavioral.jsDestroyBehavioralMCU(behavioralId);
-            behavioralId = null;
-        }
-        initBehavioralMode();
     }
 
     @Override
@@ -345,7 +353,7 @@ class ArduinoElm extends ChipElm {
         arr[0] = "Arduino Uno (High-Level Simulation)";
         String mode = useFixedVcc ? (vccChoiceIndex == 0 ? " (fixed 5V)" : " (fixed 3.3V)") : " (from circuit)";
         arr[1] = "VCC = " + getVoltageText(vcc) + mode;
-        arr[2] = "Setup/Loop: JavaScript-based behavior";
+        arr[2] = "Setup/Loop: Java runtime behavior";
     }
 
     int getDumpType() { return 400; }

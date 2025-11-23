@@ -1,113 +1,78 @@
-172.31.229.32 - - [14/Nov/2025 21:43:46] "GET /circuitjs.html HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 21:43:46] "GET /js/behavioral-mcu.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 21:43:46] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 21:56:23] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 21:56:23] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 21:56:23] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 21:56:26] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:10:19] "GET /circuitjs.html HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:10:19] "GET /font/fontello.css HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:10:19] "GET /lz-string.min.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:10:19] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:10:19] "GET /js/behavioral-mcu.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:10:19] code 404, message File not found
-172.31.229.32 - - [14/Nov/2025 22:10:19] "GET /favicon.ico HTTP/1.1" 404 -
-172.31.229.32 - - [14/Nov/2025 22:10:22] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:10:22] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:10:22] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:10:22] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:10:25] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:18:27] "GET /circuitjs.html HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:18:27] "GET /font/fontello.css HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:18:27] "GET /lz-string.min.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:18:28] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:18:28] code 404, message File not found
-172.31.229.32 - - [14/Nov/2025 22:18:28] "GET /favicon.ico HTTP/1.1" 404 -
-172.31.229.32 - - [14/Nov/2025 22:25:41] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:25:41] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:25:41] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:25:42] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:25:44] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:30:03] "GET /circuitjs.html HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:30:03] "GET /font/fontello.css HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:30:03] "GET /lz-string.min.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:30:03] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:30:03] code 404, message File not found
-172.31.229.32 - - [14/Nov/2025 22:30:03] "GET /favicon.ico HTTP/1.1" 404 -
-172.31.229.32 - - [14/Nov/2025 22:30:07] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:30:07] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:30:07] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:30:07] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:30:10] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:31:26] code 404, message File not found
-172.31.229.32 - - [14/Nov/2025 22:31:26] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
-172.31.229.32 - - [14/Nov/2025 22:33:59] "GET /circuitjs.html HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:33:59] "GET /font/fontello.css HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:33:59] "GET /lz-string.min.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:33:59] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:33:59] code 404, message File not found
-172.31.229.32 - - [14/Nov/2025 22:33:59] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
-172.31.229.32 - - [14/Nov/2025 22:33:59] code 404, message File not found
-172.31.229.32 - - [14/Nov/2025 22:33:59] "GET /favicon.ico HTTP/1.1" 404 -
-172.31.229.32 - - [14/Nov/2025 22:34:01] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:34:01] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:34:01] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:34:02] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:34:06] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:38:59] "GET /circuitjs.html HTTP/1.1" 304 -
-172.31.229.32 - - [14/Nov/2025 22:38:59] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:38:59] code 404, message File not found
-172.31.229.32 - - [14/Nov/2025 22:38:59] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
-172.31.229.32 - - [14/Nov/2025 22:39:02] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:39:02] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:39:02] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:39:10] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:46:12] "GET /circuitjs.html HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:46:12] "GET /font/fontello.css HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:46:12] "GET /lz-string.min.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:46:13] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:46:13] code 404, message File not found
-172.31.229.32 - - [14/Nov/2025 22:46:13] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
-172.31.229.32 - - [14/Nov/2025 22:46:13] code 404, message File not found
-172.31.229.32 - - [14/Nov/2025 22:46:13] "GET /favicon.ico HTTP/1.1" 404 -
-172.31.229.32 - - [14/Nov/2025 22:46:15] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:46:15] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:46:15] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:46:15] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:46:21] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:55:55] "GET /circuitjs.html HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:55:55] "GET /font/fontello.css HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:55:55] "GET /lz-string.min.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:55:55] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:55:55] code 404, message File not found
-172.31.229.32 - - [14/Nov/2025 22:55:55] "GET /favicon.ico HTTP/1.1" 404 -
-172.31.229.32 - - [14/Nov/2025 22:55:59] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:55:59] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:55:59] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:56:00] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:56:02] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:56:33] code 404, message File not found
-172.31.229.32 - - [14/Nov/2025 22:56:33] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
-172.31.229.32 - - [14/Nov/2025 22:57:33] "GET /circuitjs.html HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:57:33] "GET /font/fontello.css HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:57:34] "GET /lz-string.min.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:57:34] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:57:34] "GET /iframe.html HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:57:35] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:57:35] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:57:35] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:57:35] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:57:38] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 22:57:40] code 404, message File not found
-172.31.229.32 - - [14/Nov/2025 22:57:40] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
-172.31.229.32 - - [14/Nov/2025 23:00:40] "GET /circuitjs.html HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 23:00:40] "GET /font/fontello.css HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 23:00:40] code 404, message File not found
-172.31.229.32 - - [14/Nov/2025 23:00:40] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 23:00:40] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
-172.31.229.32 - - [14/Nov/2025 23:00:40] "GET /lz-string.min.js HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 23:00:42] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 23:00:43] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 23:00:43] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 23:00:43] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-172.31.229.32 - - [14/Nov/2025 23:00:46] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 05:05:58] "GET /circuitjs.html HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 05:05:58] "GET /font/fontello.css HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 05:05:58] "GET /lz-string.min.js HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 05:05:58] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 05:05:58] code 404, message File not found
+172.31.229.32 - - [23/Nov/2025 05:05:58] "GET /favicon.ico HTTP/1.1" 404 -
+172.31.229.32 - - [23/Nov/2025 05:06:00] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [23/Nov/2025 05:06:08] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 05:06:08] "GET /iframe.html HTTP/1.1" 304 -
+172.31.229.32 - - [23/Nov/2025 05:06:09] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 05:06:09] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 05:06:09] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 05:06:14] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 05:43:50] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [23/Nov/2025 06:00:46] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:00:46] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:00:46] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:00:50] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:05:37] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [23/Nov/2025 06:05:40] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:05:40] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:05:41] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:05:44] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:08:26] "GET /circuitjs.html HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:08:26] "GET /font/fontello.css HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:08:27] "GET /lz-string.min.js HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:08:27] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:08:27] code 404, message File not found
+172.31.229.32 - - [23/Nov/2025 06:08:27] "GET /favicon.ico HTTP/1.1" 404 -
+172.31.229.32 - - [23/Nov/2025 06:08:27] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:08:28] "GET /circuitjs1/setuplist.txt HTTP/1.1" 304 -
+172.31.229.32 - - [23/Nov/2025 06:08:28] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 304 -
+172.31.229.32 - - [23/Nov/2025 06:08:28] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 304 -
+172.31.229.32 - - [23/Nov/2025 06:08:31] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 304 -
+172.31.229.32 - - [23/Nov/2025 06:19:18] "GET /circuitjs.html HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:19:18] "GET /font/fontello.css HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:19:18] "GET /lz-string.min.js HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:19:18] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:19:19] code 404, message File not found
+172.31.229.32 - - [23/Nov/2025 06:19:19] "GET /favicon.ico HTTP/1.1" 404 -
+172.31.229.32 - - [23/Nov/2025 06:19:21] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:19:21] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:19:21] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:19:21] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:19:23] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:22:13] "GET /circuitjs.html HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:22:14] "GET /font/fontello.css HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:22:14] "GET /lz-string.min.js HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:22:14] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:22:14] code 404, message File not found
+172.31.229.32 - - [23/Nov/2025 06:22:14] "GET /favicon.ico HTTP/1.1" 404 -
+172.31.229.32 - - [23/Nov/2025 06:22:16] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:22:16] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:22:16] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:22:16] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:22:20] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:33:06] "GET /circuitjs.html HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:33:06] "GET /font/fontello.css HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:33:06] "GET /lz-string.min.js HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:33:07] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:33:07] code 404, message File not found
+172.31.229.32 - - [23/Nov/2025 06:33:07] "GET /favicon.ico HTTP/1.1" 404 -
+172.31.229.32 - - [23/Nov/2025 06:34:58] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:34:58] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:34:58] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:34:58] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:35:01] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:53:41] "GET /circuitjs.html HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:53:41] "GET /font/fontello.css HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:53:41] "GET /lz-string.min.js HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:53:41] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:53:42] code 404, message File not found
+172.31.229.32 - - [23/Nov/2025 06:53:42] "GET /favicon.ico HTTP/1.1" 404 -
+172.31.229.32 - - [23/Nov/2025 06:53:43] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:53:44] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:53:44] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:53:44] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+172.31.229.32 - - [23/Nov/2025 06:53:47] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -
