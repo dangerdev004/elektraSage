@@ -1,0 +1,37 @@
+Turning off precompile in incremental mode.
+Super Dev Mode starting up
+   workDir: /tmp/gwt-codeserver-4344915998038620805.tmp
+   Loading Java files in com.lushprojects.circuitjs1.circuitjs1.
+   Ignored 80 units with compilation errors in first pass.
+Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
+   Module setup completed in 9798 ms
+
+The code server is ready at http://172.31.229.32:9876/
+GET /recompile/circuitjs1
+   Job com.lushprojects.circuitjs1.circuitjs1_1_0
+      starting job: com.lushprojects.circuitjs1.circuitjs1_1_0
+      binding: user.agent=safari
+      Compiling module com.lushprojects.circuitjs1.circuitjs1
+         Ignored 80 units with compilation errors in first pass.
+Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
+         Computing all possible rebind results for 'com.google.gwt.useragent.client.UserAgentAsserter'
+            Rebinding com.google.gwt.useragent.client.UserAgentAsserter
+               Checking rule <generate-with class='com.google.gwt.editor.rebind.SimpleBeanEditorDriverGenerator'/>
+                  [WARN] Detected warnings related to 'com.google.gwt.editor.client.SimpleBeanEditorDriver'.   Are validation-api-<version>.jar and validation-api-<version>-sources.jar on the classpath?
+                  Specify -logLevel DEBUG to see all errors.
+                  [WARN] Unknown type 'com.google.gwt.editor.client.SimpleBeanEditorDriver' specified in deferred binding rule
+         Unification traversed 29061 fields and methods and 2388 types. 2353 are considered part of the current module and 2353 had all of their fields and methods traversed.
+         Warnings in com/google/gwt/emul/java/util/Arrays.java
+            [WARN] Line 1782: [unusable-by-js] Type of parameter 'd1' in 'int Arrays.1methodref$compare$Type.compare(long, long)' is not usable by but exposed to JavaScript.
+            [WARN] Line 1782: [unusable-by-js] Type of parameter 'd2' in 'int Arrays.1methodref$compare$Type.compare(long, long)' is not usable by but exposed to JavaScript.
+         [WARN] Suppress "[unusable-by-js]" warnings by adding a `@SuppressWarnings("unusable-by-js")` annotation to the corresponding member.
+         Compiling 1 permutation
+            Compiling permutation 0...
+            Linking per-type JS with 2332 new/changed types.
+            Source Maps Enabled
+         Compile of permutations succeeded
+         Compilation succeeded -- 6.230s
+      Linking into /tmp/gwt-codeserver-4344915998038620805.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-2/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-4344915998038620805.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-2/extras/circuitjs1
+         Link succeeded
+         Linking succeeded -- 0.327s
+      6.642s total -- Compile completed
