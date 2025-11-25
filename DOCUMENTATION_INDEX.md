@@ -19,7 +19,18 @@ This comprehensive documentation set explains everything you need to know about 
      - Complete algorithms with pseudocode
      - Mathematical foundations
 
-2. **[INTERNALS.md](./INTERNALS.md)** - Original Developer Documentation
+2. **[ARCHITECTURE_SEGREGATION.md](./ARCHITECTURE_SEGREGATION.md)** - UI/Simulation Segregation **NEW!**
+   - 🎯 **Start here if:** You're working on the codebase or want to understand the separation
+   - ⏱️ **Reading time:** 20-30 minutes
+   - **Contents:**
+     - UI and Simulation Engine separation architecture
+     - CircuitSimulationEngine class documentation
+     - Integration patterns and state synchronization
+     - Benefits of the new architecture
+     - Migration guide for developers
+     - When to modify which layer
+
+3. **[INTERNALS.md](./INTERNALS.md)** - Original Developer Documentation
    - 🎯 **Start here if:** You're working on the Java codebase itself
    - ⏱️ **Reading time:** 30-45 minutes
    - **Contents:**

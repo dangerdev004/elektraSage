@@ -242,6 +242,11 @@ MouseOutHandler, MouseWheelHandler {
     CircuitElm plotXElm, plotYElm;
     int draggingPost;
     SwitchElm heldSwitchElm;
+    
+    // Simulation engine - handles core circuit simulation logic
+    CircuitSimulationEngine simulationEngine;
+    
+    // Legacy fields maintained for backward compatibility and UI interaction
     double circuitMatrix[][], circuitRightSide[], lastNodeVoltages[], nodeVoltages[], origRightSide[], origMatrix[][];
     RowInfo circuitRowInfo[];
     int circuitPermute[];
@@ -795,6 +800,9 @@ MouseOutHandler, MouseWheelHandler {
 	undoStack = new Vector<UndoItem>();
 	redoStack = new Vector<UndoItem>();
 
+	// Initialize the simulation engine
+	simulationEngine = new CircuitSimulationEngine(this);
+	simulationEngine.init();
 
 	scopes = new Scope[20];
 	scopeColCount = new int[20];
@@ -2485,6 +2493,11 @@ MouseOutHandler, MouseWheelHandler {
 	    }
 	}
 	voltageSourceCount = vscount;
+	
+	// Sync voltage source data to simulation engine
+	simulationEngine.voltageSourceCount = voltageSourceCount;
+	simulationEngine.voltageSources = voltageSources;
+	simulationEngine.circuitNonLinear = circuitNonLinear;
 
 	// show resistance in voltage sources if there's only one.
 	// can't use voltageSourceCount here since that counts internal voltage sources, like the one in GroundElm
@@ -2509,6 +2522,8 @@ MouseOutHandler, MouseWheelHandler {
 	nodesWithGroundConnection = null;
 	
 	timeStep = maxTimeStep;
+	simulationEngine.timeStep = timeStep;
+	simulationEngine.maxTimeStep = maxTimeStep;
 	needsStamp = true;
 	
 	callAnalyzeHook();
@@ -2553,6 +2568,21 @@ MouseOutHandler, MouseWheelHandler {
 	    circuitRowInfo[i] = new RowInfo();
 	circuitNeedsMap = false;
 	
+	// Update simulation engine state
+	simulationEngine.circuitMatrix = circuitMatrix;
+	simulationEngine.circuitRightSide = circuitRightSide;
+	simulationEngine.nodeVoltages = nodeVoltages;
+	simulationEngine.lastNodeVoltages = lastNodeVoltages;
+	simulationEngine.origMatrix = origMatrix;
+	simulationEngine.origRightSide = origRightSide;
+	simulationEngine.circuitMatrixSize = circuitMatrixSize;
+	simulationEngine.circuitMatrixFullSize = circuitMatrixFullSize;
+	simulationEngine.circuitRowInfo = circuitRowInfo;
+	simulationEngine.circuitPermute = circuitPermute;
+	simulationEngine.circuitNeedsMap = circuitNeedsMap;
+	simulationEngine.circuitNonLinear = circuitNonLinear;
+	simulationEngine.voltageSourceCount = voltageSourceCount;
+	
 	connectUnconnectedNodes();
 
 	// stamp linear circuit elements
@@ -2594,6 +2624,10 @@ MouseOutHandler, MouseWheelHandler {
 	    if (elmArr[i] instanceof ScopeElm)
 		scopeElmArr[j++] = (ScopeElm) elmArr[i];
 	}	
+	
+	// Sync arrays to simulation engine
+	simulationEngine.elmArr = elmArr;
+	simulationEngine.scopeElmArr = scopeElmArr;
 
 	needsStamp = false;
     }
@@ -2877,129 +2911,74 @@ MouseOutHandler, MouseWheelHandler {
 //	cv.repaint();
     }
     
+    // ========================================================================
+    // MATRIX STAMPING METHODS - Delegated to CircuitSimulationEngine
+    // ========================================================================
+    
     // control voltage source vs with voltage from n1 to n2 (must
     // also call stampVoltageSource())
     void stampVCVS(int n1, int n2, double coef, int vs) {
-	int vn = nodeList.size()+vs;
-	stampMatrix(vn, n1, coef);
-	stampMatrix(vn, n2, -coef);
+	simulationEngine.stampVCVS(n1, n2, coef, vs);
     }
     
     // stamp independent voltage source #vs, from n1 to n2, amount v
     void stampVoltageSource(int n1, int n2, int vs, double v) {
-	int vn = nodeList.size()+vs;
-	stampMatrix(vn, n1, -1);
-	stampMatrix(vn, n2, 1);
-	stampRightSide(vn, v);
-	stampMatrix(n1, vn, 1);
-	stampMatrix(n2, vn, -1);
+	simulationEngine.stampVoltageSource(n1, n2, vs, v);
     }
 
     // use this if the amount of voltage is going to be updated in doStep(), by updateVoltageSource()
     void stampVoltageSource(int n1, int n2, int vs) {
-	int vn = nodeList.size()+vs;
-	stampMatrix(vn, n1, -1);
-	stampMatrix(vn, n2, 1);
-	stampRightSide(vn);
-	stampMatrix(n1, vn, 1);
-	stampMatrix(n2, vn, -1);
+	simulationEngine.stampVoltageSource(n1, n2, vs);
     }
     
     // update voltage source in doStep()
     void updateVoltageSource(int n1, int n2, int vs, double v) {
-	int vn = nodeList.size()+vs;
-	stampRightSide(vn, v);
+	simulationEngine.updateVoltageSource(n1, n2, vs, v);
     }
     
     void stampResistor(int n1, int n2, double r) {
-	double r0 = 1/r;
-	if (Double.isNaN(r0) || Double.isInfinite(r0)) {
-	    System.out.print("bad resistance " + r + " " + r0 + "\n");
-	    int a = 0;
-	    a /= a;
-	}
-	stampMatrix(n1, n1, r0);
-	stampMatrix(n2, n2, r0);
-	stampMatrix(n1, n2, -r0);
-	stampMatrix(n2, n1, -r0);
+	simulationEngine.stampResistor(n1, n2, r);
     }
 
     void stampConductance(int n1, int n2, double r0) {
-	stampMatrix(n1, n1, r0);
-	stampMatrix(n2, n2, r0);
-	stampMatrix(n1, n2, -r0);
-	stampMatrix(n2, n1, -r0);
+	simulationEngine.stampConductance(n1, n2, r0);
     }
 
     // specify that current from cn1 to cn2 is equal to voltage from vn1 to 2, divided by g
     void stampVCCurrentSource(int cn1, int cn2, int vn1, int vn2, double g) {
-	stampMatrix(cn1, vn1, g);
-	stampMatrix(cn2, vn2, g);
-	stampMatrix(cn1, vn2, -g);
-	stampMatrix(cn2, vn1, -g);
+	simulationEngine.stampVCCurrentSource(cn1, cn2, vn1, vn2, g);
     }
 
     void stampCurrentSource(int n1, int n2, double i) {
-	stampRightSide(n1, -i);
-	stampRightSide(n2, i);
+	simulationEngine.stampCurrentSource(n1, n2, i);
     }
 
     // stamp a current source from n1 to n2 depending on current through vs
     void stampCCCS(int n1, int n2, int vs, double gain) {
-	int vn = nodeList.size()+vs;
-	stampMatrix(n1, vn, gain);
-	stampMatrix(n2, vn, -gain);
+	simulationEngine.stampCCCS(n1, n2, vs, gain);
     }
 
     // stamp value x in row i, column j, meaning that a voltage change
     // of dv in node j will increase the current into node i by x dv.
     // (Unless i or j is a voltage source node.)
     void stampMatrix(int i, int j, double x) {
-	if (Double.isInfinite(x))
-	    debugger();
-	if (i > 0 && j > 0) {
-	    if (circuitNeedsMap) {
-		i = circuitRowInfo[i-1].mapRow;
-		RowInfo ri = circuitRowInfo[j-1];
-		if (ri.type == RowInfo.ROW_CONST) {
-		    //System.out.println("Stamping constant " + i + " " + j + " " + x);
-		    circuitRightSide[i] -= x*ri.value;
-		    return;
-		}
-		j = ri.mapCol;
-		//System.out.println("stamping " + i + " " + j + " " + x);
-	    } else {
-		i--;
-		j--;
-	    }
-	    circuitMatrix[i][j] += x;
-	}
+	simulationEngine.stampMatrix(i, j, x);
     }
 
     // stamp value x on the right side of row i, representing an
     // independent current source flowing into node i
     void stampRightSide(int i, double x) {
-	if (i > 0) {
-	    if (circuitNeedsMap) {
-		i = circuitRowInfo[i-1].mapRow;
-		//System.out.println("stamping " + i + " " + x);
-	    } else
-		i--;
-	    circuitRightSide[i] += x;
-	}
+	simulationEngine.stampRightSide(i, x);
     }
 
     // indicate that the value on the right side of row i changes in doStep()
     void stampRightSide(int i) {
-	//System.out.println("rschanges true " + (i-1));
-	if (i > 0)
-	    circuitRowInfo[i-1].rsChanges = true;
+	simulationEngine.stampRightSide(i);
     }
     
     // indicate that the values on the left side of row i change in doStep()
     void stampNonLinear(int i) {
-	if (i > 0)
-	    circuitRowInfo[i-1].lsChanges = true;
+	simulationEngine.stampNonLinear(i);
     }
 
     double getIterCount() {

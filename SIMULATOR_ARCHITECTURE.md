@@ -17,28 +17,29 @@
 
 CircuitJS1 is a browser-based electronic circuit simulator originally created in Java as an applet by Paul Falstad and converted to JavaScript using Google Web Toolkit (GWT) by Iain Sharp. 
 
+**Note**: The architecture has been recently refactored to separate UI and simulation concerns. See [ARCHITECTURE_SEGREGATION.md](ARCHITECTURE_SEGREGATION.md) for detailed information about this segregation.
+
 ### High-Level Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     User Interface Layer                     │
-│  (GWT Widgets, Canvas, Menus, Mouse/Keyboard Handlers)      │
+│  (CirSim.java - UI/UX Components)                           │
+│  - GWT Widgets, Canvas, Menus                               │
+│  - Mouse/Keyboard Handlers                                   │
+│  - Element editing and placement                             │
 └──────────────────┬──────────────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────────────┐
-│              Circuit Management Layer                        │
-│  (CirSim.java - Main simulator class)                       │
-│  - Circuit state management                                  │
-│  - Element lifecycle management                              │
-│  - Undo/Redo system                                         │
-└──────────────────┬──────────────────────────────────────────┘
+                   │ delegates to
                    │
 ┌──────────────────▼──────────────────────────────────────────┐
 │            Simulation Engine Layer                           │
+│  (CircuitSimulationEngine.java - NEW!)                      │
 │  - Modified Nodal Analysis (MNA) matrix solver              │
+│  - Matrix stamping operations                                │
 │  - Timestep management                                       │
 │  - Convergence iteration                                     │
 └──────────────────┬──────────────────────────────────────────┘
+                   │ interacts with
                    │
 ┌──────────────────▼──────────────────────────────────────────┐
 │           Circuit Element Layer                              │
@@ -104,26 +105,55 @@ The MNA method expresses these laws as a system of linear equations that can be 
 ### Key Classes
 
 #### 1. CirSim.java (~6700 lines)
-The main simulator class - orchestrates everything.
+The main simulator class - orchestrates UI and coordinates with simulation engine.
 
 **Responsibilities:**
-- Manages the main simulation loop
-- Builds and solves the MNA matrix
 - Handles user interactions (mouse, keyboard)
-- Manages UI (menus, toolbars, scopes)
+- Manages UI (menus, toolbars, scopes, canvas rendering)
 - Circuit file I/O (save/load)
 - Maintains list of circuit elements
+- Coordinates with CircuitSimulationEngine for simulation execution
+- Delegates matrix stamping to simulation engine
 
 **Key Fields:**
 ```java
-Vector<CircuitElm> elmList;        // All circuit elements
+Vector<CircuitElm> elmList;              // All circuit elements
+CircuitSimulationEngine simulationEngine; // NEW! Simulation engine
+double circuitMatrix[][];                // The 'A' matrix (synced with engine)
+double circuitRightSide[];               // The 'B' vector (synced with engine)
+int circuitMatrixSize;                   // Size of matrix
+boolean simRunning;                      // Simulation running state
+```
+
+#### 1.1 CircuitSimulationEngine.java (~600 lines) **NEW!**
+The simulation engine class - handles pure circuit simulation logic.
+
+**Responsibilities:**
+- Builds and solves the MNA matrix
+- Manages matrix stamping operations
+- Handles timestep management and convergence
+- Calculates node voltages and currents
+- No UI dependencies - pure simulation logic
+
+**Key Fields:**
+```java
 double circuitMatrix[][];          // The 'A' matrix
 double circuitRightSide[];         // The 'B' vector
+double nodeVoltages[];             // Solved node voltages
 int circuitMatrixSize;             // Size of matrix
-int circuitMatrixFullSize;         // Before simplification
-int circuitRowInfo[];              // Mapping for matrix simplification
 double timeStep;                   // Simulation timestep (seconds)
 boolean converged;                 // Has iteration converged?
+CircuitElm voltageSources[];       // Voltage source elements
+```
+
+**Key Methods:**
+```java
+void stampVoltageSource(int n1, int n2, int vs, double v);
+void stampResistor(int n1, int n2, double r);
+void stampMatrix(int i, int j, double x);
+void stampCircuit();               // Populate the matrix
+void runCircuit(boolean didAnalyze); // Execute simulation iterations
+void applySolvedRightSide(double rs[]); // Apply solved voltages
 ```
 
 #### 2. CircuitElm.java (~2500 lines)
