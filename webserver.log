@@ -1,0 +1,36 @@
+172.31.229.32 - - [25/Nov/2025 13:46:22] "GET /circuitjs.html HTTP/1.1" 200 -
+172.31.229.32 - - [25/Nov/2025 13:46:22] "GET /font/fontello.css HTTP/1.1" 200 -
+172.31.229.32 - - [25/Nov/2025 13:46:22] "GET /lz-string.min.js HTTP/1.1" 200 -
+172.31.229.32 - - [25/Nov/2025 13:46:22] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+172.31.229.32 - - [25/Nov/2025 13:46:23] code 404, message File not found
+172.31.229.32 - - [25/Nov/2025 13:46:23] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [25/Nov/2025 13:46:23] code 404, message File not found
+172.31.229.32 - - [25/Nov/2025 13:46:23] "GET /favicon.ico HTTP/1.1" 404 -
+172.31.229.32 - - [25/Nov/2025 13:46:23] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [25/Nov/2025 13:46:23] code 404, message File not found
+172.31.229.32 - - [25/Nov/2025 13:46:23] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
+172.31.229.32 - - [25/Nov/2025 13:46:24] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [25/Nov/2025 13:46:24] code 404, message File not found
+172.31.229.32 - - [25/Nov/2025 13:46:24] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [25/Nov/2025 13:46:24] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [25/Nov/2025 13:46:24] code 404, message File not found
+172.31.229.32 - - [25/Nov/2025 13:46:24] "GET /circuit/about.html HTTP/1.1" 404 -
+172.31.229.32 - - [25/Nov/2025 13:46:25] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [25/Nov/2025 13:46:25] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [25/Nov/2025 13:46:25] code 404, message File not found
+172.31.229.32 - - [25/Nov/2025 13:46:25] "GET /circuit/canvas2svg.js HTTP/1.1" 404 -
+172.31.229.32 - - [25/Nov/2025 13:46:25] code 404, message File not found
+172.31.229.32 - - [25/Nov/2025 13:46:25] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [25/Nov/2025 13:46:27] "GET /circuitjs.html HTTP/1.1" 304 -
+172.31.229.32 - - [25/Nov/2025 13:46:27] "GET /service-worker.js HTTP/1.1" 304 -
+172.31.229.32 - - [25/Nov/2025 13:46:27] code 404, message File not found
+172.31.229.32 - - [25/Nov/2025 13:46:27] "GET /circuit/manifest.json HTTP/1.1" 404 -
+172.31.229.32 - - [25/Nov/2025 13:46:27] code 404, message File not found
+172.31.229.32 - - [25/Nov/2025 13:46:27] "GET /circuit/about.html HTTP/1.1" 404 -
+172.31.229.32 - - [25/Nov/2025 13:46:34] "GET /font/fontello.woff2?11951332 HTTP/1.1" 200 -
+172.31.229.32 - - [25/Nov/2025 13:46:34] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+172.31.229.32 - - [25/Nov/2025 13:46:34] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+172.31.229.32 - - [25/Nov/2025 13:46:34] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...
+
+Keyboard interrupt received, exiting.

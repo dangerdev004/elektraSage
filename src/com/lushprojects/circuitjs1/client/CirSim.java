@@ -585,6 +585,12 @@ MouseOutHandler, MouseWheelHandler {
 
 	optionsMenuBar = m = new MenuBar(true );
 	menuBar.addItem(Locale.LS("Options"), optionsMenuBar);
+	
+	// AI Chatbot menu
+	MenuBar aiMenuBar = new MenuBar(true);
+	aiMenuBar.addItem(iconMenuItem("comment", "Open AI Chatbot", new MyCommand("ai", "openchatbot")));
+	menuBar.addItem(Locale.LS("AI Assistant"), aiMenuBar);
+	
 	m.addItem(dotsCheckItem = new CheckboxMenuItem(Locale.LS("Show Current")));
 	dotsCheckItem.setState(true);
 	m.addItem(voltsCheckItem = new CheckboxMenuItem(Locale.LS("Show Voltage"),
@@ -3390,6 +3396,10 @@ MouseOutHandler, MouseWheelHandler {
     	}
     	if (item=="search") {
     	    	dialogShowing = new SearchDialog(this);
+    	    	dialogShowing.show();
+    	}
+    	if (menu=="ai" && item=="openchatbot") {
+    	    	dialogShowing = new AIChatbotDialog(this);
     	    	dialogShowing.show();
     	}
     	if (menu=="options" && item=="other")
