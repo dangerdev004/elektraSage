@@ -25,6 +25,9 @@ package com.lushprojects.circuitjs1.client;
 // or https://github.com/sharpie7/circuitjs1/blob/master/INTERNALS.md
 
 import java.util.Vector;
+
+import javax.swing.plaf.MenuBarUI;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -160,6 +163,7 @@ MouseOutHandler, MouseWheelHandler {
     MenuItem scopeSelectYMenuItem;
     ScopePopupMenu scopePopupMenu;
     Element sidePanelCheckboxLabel;
+	MenuBar microcontrollerMenuBar;
    
     String lastCursorStyle;
     boolean mouseWasOverSplitter = false;
@@ -541,6 +545,7 @@ MouseOutHandler, MouseWheelHandler {
 
 	// make buttons side by side if there's room
 	buttonPanel=(VERTICALPANELWIDTH == 166) ? new HorizontalPanel() : new VerticalPanel();
+	buttonPanel.setStyleName("buttonPanel");
 
 	m = new MenuBar(true);
 	m.addItem(undoItem = menuItemWithShortcut("ccw", "Undo", Locale.LS(ctrlMetaKey + "Z"), new MyCommand("edit","undo")));
@@ -674,7 +679,15 @@ MouseOutHandler, MouseWheelHandler {
 	m.addItem(optionsItem = new CheckboxAlignedMenuItem(Locale.LS("Other Options..."), new MyCommand("options","other")));
 	if (isElectron())
 	    m.addItem(new CheckboxAlignedMenuItem(Locale.LS("Toggle Dev Tools"), new MyCommand("options","devtools")));
-
+	
+	MenuBar microcontrollerMenuBar = new MenuBar(true);
+	microcontrollerMenuBar.setAutoOpen(true);
+	menuBar.addItem(Locale.LS("Microcontroller"), microcontrollerMenuBar);
+	microcontrollerMenuBar.addItem(getClassCheckItem(Locale.LS("Arduino UNO"), "ArduinoElm"));
+	microcontrollerMenuBar.addItem(getClassCheckItem(Locale.LS("ESP8266"), "ESP8266Elm"));
+	microcontrollerMenuBar.addItem(getClassCheckItem(Locale.LS("ESP32"), "ESP32Elm"));
+	microcontrollerMenuBar.addItem(getClassCheckItem(Locale.LS("STM32"), "STM32Elm"));
+	
 	mainMenuBar = new MenuBar(true);
 	mainMenuBar.setAutoOpen(true);
 	composeMainMenu(mainMenuBar, 0);
@@ -730,7 +743,6 @@ MouseOutHandler, MouseWheelHandler {
 		setSimRunning(!simIsRunning());
 	    }
 	});
-
 	
 /*
 	dumpMatrixButton = new Button("Dump Matrix");
@@ -766,6 +778,7 @@ MouseOutHandler, MouseWheelHandler {
 	l.addStyleName("topSpace");
 	//        l.setFont(f);
 	titleLabel = new Label("Label");
+	titleLabel.setStyleName("circuitTitle");
 	//        titleLabel.setFont(f);
 	verticalPanel.add(l);
 	verticalPanel.add(titleLabel);
@@ -838,7 +851,7 @@ MouseOutHandler, MouseWheelHandler {
 
 	setColors(positiveColor, negativeColor, neutralColor, selectColor, currentColor);
 	setWheelSensitivity();
-
+	
 	if (startCircuitText != null) {
 	    getSetupList(false);
 	    readCircuit(startCircuitText);
@@ -1106,10 +1119,9 @@ MouseOutHandler, MouseWheelHandler {
     }-*/;
     
     boolean shown = false;
-    
     // this is called twice, once for the Draw menu, once for the right mouse popup menu
     public void composeMainMenu(MenuBar mainMenuBar, int num) {
-    	mainMenuBar.addItem(getClassCheckItem(Locale.LS("Add Wire"), "WireElm"));
+		mainMenuBar.addItem(getClassCheckItem(Locale.LS("Add Wire"), "WireElm"));
     	mainMenuBar.addItem(getClassCheckItem(Locale.LS("Add Resistor"), "ResistorElm"));
 
     	MenuBar passMenuBar = new MenuBar(true);
@@ -1259,7 +1271,7 @@ MouseOutHandler, MouseWheelHandler {
     	chipMenuBar.addItem(getClassCheckItem(Locale.LS("Add Static RAM"), "SRAMElm"));
     	mainMenuBar.addItem(SafeHtmlUtils.fromTrustedString(CheckboxMenuItem.checkBoxHtml+Locale.LS("&nbsp;</div>Digital Chips")), chipMenuBar);
     	
-    	MenuBar achipMenuBar = new MenuBar(true);
+		MenuBar achipMenuBar = new MenuBar(true);
     	achipMenuBar.addItem(getClassCheckItem(Locale.LS("Add 555 Timer"), "TimerElm"));
     	achipMenuBar.addItem(getClassCheckItem(Locale.LS("Add Phase Comparator"), "PhaseCompElm"));
     	achipMenuBar.addItem(getClassCheckItem(Locale.LS("Add DAC"), "DACElm"));
@@ -6242,6 +6254,8 @@ MouseOutHandler, MouseWheelHandler {
 		return (CircuitElm) new DPDTSwitchElm(x1, y1);
     	if (n=="CrossSwitchElm")
 		return (CircuitElm) new CrossSwitchElm(x1, y1);
+		if (n=="ArduinoElm")
+        return (CircuitElm) new ArduinoElm(x1, y1);
     	
     	// handle CustomCompositeElm:modelname
     	if (n.startsWith("CustomCompositeElm:")) {
