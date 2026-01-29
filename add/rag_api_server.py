@@ -20,10 +20,16 @@ CORS(app)  # Enable CORS for browser access
 # Retrieve the Groq API key from environment variable
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
+# Embeddings Path
+EMBEDDINGS_PATH = os.environ.get(
+    "EMBEDDINGS_PATH",
+    "/src/add/embeddings.joblib"
+)
+
 # Load the saved embedded data at startup
 print("Loading embeddings...")
 try:
-    df = joblib.load("embeddings.joblib")
+    df = joblib.load(EMBEDDINGS_PATH)
     print(f"Embeddings loaded successfully. {len(df)} circuits available.")
 except Exception as e:
     print(f"Error loading embeddings: {e}")

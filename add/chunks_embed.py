@@ -1,7 +1,13 @@
+import os
 import requests
 import pandas as pd
 import json
 import joblib
+
+OLLAMA_BASE_URL = os.environ.get(
+    "OLLAMA_BASE_URL",
+    "http://localhost:11434"
+)
 
 # Vector embedding using the bge-m3 model of ollama
 def vector_embedding(text_array):
@@ -13,7 +19,7 @@ def vector_embedding(text_array):
     if isinstance(text_array, str):
         text_array = [text_array]
     
-    r = requests.post("http://localhost:11434/api/embed", json={
+    r = requests.post(f"{OLLAMA_BASE_URL}/api/embed", json={
         "model": "bge-m3",
         "input": text_array
     })
