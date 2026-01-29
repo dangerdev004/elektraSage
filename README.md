@@ -1,8 +1,20 @@
-# CircuitJS1
+# ElektraSage
 
 ## Introduction
 
-CircuitJS1 is an electronic circuit simulator that runs in the browser. It was originally written by Paul Falstad as a Java Applet. It was adapted by Iain Sharp to run in the browser using GWT.
+ElektraSage is a one-stop shop for all your electronic needs especially in design & simulation.
+
+### Current Features:
+1. Normal Analog and Digital Simulations
+2. Very Basic Microcontroller I/O Support
+3. Very Basic Functional AI Support using RAG
+
+### Features Planned
+1. SPICE Integration
+2. Verilog/HDL Integration (Simulation Only)
+3. Better Sensor and Microcontroller Integration (Behavioral Simulation Only)
+
+This project is based on CircuitJS1 originally a Java Applet Created by Paul Falstad and then later it was adapted by Iain Sharp to run in the browser using GWT.
 
 For a hosted version of the application see:
 
@@ -11,95 +23,52 @@ For a hosted version of the application see:
 
 Thanks to: Edward Calver for 15 new components and other improvements; Rodrigo Hausen for file import/export and many other UI improvements; J. Mike Rollins for the Zener diode code; Julius Schmidt for the spark gap code and some examples; Dustin Soodak for help with the user interface improvements; Jacob Calvert for the T Flip Flop; Ben Hayden for scope spectrum; Thomas Reitinger, Krystian Sławiński, Usevalad Khatkevich, Lucio Sciamanna, Mauro Hemerly Gazzani, J. Miguel Silva, and Franck Viard for translations; Andre Adrian for improved emitter coupled oscillator; Felthry for many examples; Colin Howell for code improvements. LZString (c) 2013 pieroxy.
 
+## Tool Usage
+The UI is simple drag and drop with support to famous shortcuts from simulators like LTSpice, for more info refer the documentation given by [Paul Falstad's CircuitJS1](https://github.com/pfalstad/circuitjs1), for AI Usage setup the LLM and other models as instructed below. Once setup you can simply enter your queries by clicking on the <code> AI Assistant </code> option and then entering your query like this:
+
+<img width="2879" height="1532" alt="image" src="https://github.com/user-attachments/assets/c01b8a07-f3c0-4f2b-a681-4a8001292c18" />
+
+You can then import the circuit once it is generated
+
+> NOTE:  the Accuracy of AI generated circuits is not guaranteed and it pretty low for now it depends greatly on the LLM you use and other factors.
+
+Microcontroller Support:
+It is very basic and breaks a lot for the time being only <code>Arduino Uno</code> is supported, you can only do <code>digitalWrite</code> commands properly.
+
+<img width="2879" height="1532" alt="image" src="https://github.com/user-attachments/assets/ca91bd4b-c216-44fc-9376-dd01fd400c33" />
+
+You can either use some example codes or write your own Custom Sketches like you would on Arduino IDE
+
+
+## LLM Selection and Integration
+For our usage we have used <code> LLama 3.3 70B - Versatile </code> through <code> [GROQ](https://console.groq.com/home) </code>, for this you will have to sign up and create a account.
+
+But you can certainly use your LLMs either local or cloud, for local LLMs you will have to create separate arrangements. 
+
+After you get your API for LLM, you will have to change API settings in the file:
+
+1. <code> add/rag_inference_groq.py </code>
+2. <code> add/rag_api_server.py </code>
+3. Add API key to <code>.env</code> and make sure this file remains listed in <code>.gitignore</code>
+
+We are working on making this plug and play but for the time being this is what has to be done.
+
+## Chunking and Embedding (RAG)
+We have already added embeddings in file <code>embeddings.joblib</code> for now but if you want to chunk and embed yourself, you will have two options
+1. Do it our way: Using <code>BGE-M3</code> model from Ollama, we already have used it and the code works with it by default, you will have to setup Ollama on your host and download the models
+
+2. Or you can setup it yourself using tools you like, for this you will have to make changes to the file: <code> add/chunks_embed.py </code>. 
+
 ## Building the web application
 
-The web application can be compiled and run locally using Eclipse, or in a cloud development container like Github Codespaces or gitpod.io. Both of these services provide a number of free usage hours every month. You can also use the cloud tools from `./dev.sh` on your local Linux machine or in a local docker container.
-
-### Development using Eclipse
-
-The tools you will need to build the project are:
-
-* Eclipse, Oxygen version.
-* GWT plugin for Eclipse.
-
-Install "Eclipse for Java developers" from [here](https://www.eclipse.org/downloads/packages/). To add the GWT plugin for Eclipse follow the instructions [here](https://gwt-plugins.github.io/documentation/gwt-eclipse-plugin/Download.html).
-
-This repository is a project folder for your Eclipse project space. Once you have a local copy you can then build and run in development mode or build for deployment. Running in super development mode is done by clicking on the "run" icon on the toolbar and choosing http://127.0.0.1:8888/circuitjs.html from the "Development Mode" tab which appears. Building for deployment is done by selecting the project root node and using the GWT button on the Eclipse taskbar and choosing "GWT Compile Project...".
-
-GWT will build its output in to the "war" directory. In the "war" directory the file "iframe.html" is loaded as an iFrame in to the spare space at the bottom of the right hand pannel. It can be used for branding etc.
-
-### Development using cloud containers
-
-1. Install [Visual Studio Code](https://code.visualstudio.com/) and the appropriate remote extension: either [Gitpod Extension](https://marketplace.visualstudio.com/items?itemName=gitpod.gitpod-desktop) or [Codespaces Extension](https://marketplace.visualstudio.com/items?itemName=GitHub.codespaces).
-2. Open your fork of the `circuitjs1` repository in your chosen provider's dev container.
-3. This should open a new tab in your browser showing VS Code. Click in the green button in the bottom left corner, then select "Open in VS Code Desktop" in the popup menu that opened. Click "Allow" in all URL popups and authenticate using github if asked.
-
-Once you have successfully connected your local VS Code to the remote workspace, you should be able to see the content of the remote container in your local VS Code. You can now continue with the setup:
-
-4. Open a shell inside the dev container by pressing `Ctrl+Backtick` or pressing `F1` and typing "Create new Terminal".
-5. Make sure you are in the folder `/workspaces/circuitjs1` inside the container (necessary only once per newly created container).
-6. Run `./dev.sh setup` to install all development dependencies, including GWT and Java.
-7. Run `./dev.sh start` to start the web server and the GWT code server. This will start two services: http://localhost:8000 and http://localhost:9876.
-8. Make sure both port and 8000 and 9876 are forwarded in the "Ports" tab (next to "Terminal").
-9. If you edit a Java file in VS Code and reload http://localhost:8000, it should recompile the file automatically. It will then load the compiled JavaScript and the corresponding source map from the code server running on http://localhost:9876. You should be able to see the your changes in the web application.
-
-> ***Note:*** When running the web application server inside a remote dev container, port forwarding is necessary in order to access the remote server from your own computer. This port forwarding is provided by Visual Studio Code running on your local computer.
->
-> Theoretically, it would be possible to use the browser-based VS Code interface. However, both Gitpod and Codespaces map forwarded ports to different domain names instead of different ports, which confuses the GWT code loader. It is possible to fix this by live-patching the `serverUrl` variable in `circuitjs1.nocache.js` using a custom HTTP server, but it also requires setting the port visibility to "Public" to avoid CORS errors due to redirects. Using a local installation of VS Code is much simpler.
-
-### Development using Gradle
-
-To build the application using gradle, do the following:
-
-```bash
-# 1. Run Gradle build with verbose output:
-gradle compileGwt --console verbose --info
-# 2. Create the web-site directory from the build files:
-gradle makeSite --console verbose --info
-```
-
-Now, just open `site/circuitjs.html` with your browser and enjoy!
-
-You can do the same thing inside GitHub Codespaces.  Then after creating the site directory, you can create a web server using:
-
-```bash
-cd site
-python3 -m http.server
-```
-
-Then go to the Ports tab, hover over the "Forwarded Address" and click "Follow Link".  Then click `circuitjs.html` to view the application.
-
-## Deployment of the web application
-
-* "GWT Compile Project..." as explained above or run `./dev.sh compile`. This will put the outputs in to the "war" directory in the Eclipse project folder. You then need to copy everything in the "war" directory, except the "WEB-INF" directory, on to your web server.
-* Customize the header of the file "circuitjs1.html" to include your tracking, favicon etc.
-* Customize the "iframe.html" file to include any branding you want in the right hand panel of the application
-* The optional file "shortrelay.php" is a server-side script to act as a relay to a URL shortening service to avoid cross-origin problems with a purely client solution. You may want to customize this for your site. If you don't want to use this feature edit the circuitjs1.java file before compiling.
-* If you wish to enable dropbox loading and saving a dropbox API app-key is needed. This should be edited in to the circuitjs.html file where needed. If this is not included the relevant features will be disabled.
-
-
-The link for the full-page version of the application is now:
-`http://<your host>/<your path>/circuitjs1.html`
-(you can rename the "circuitjs1.html" file if you want too though you should also update "shortrelay.php" if you do).
-
-Just for reference the files should look like this
-
-```
--+ Directory containing the front page (eg "circuitjs")
-  +- circuitjs.html - full page version of application
-  +- iframe.html - see notes above
-  +- shortrelay.php - see notes above
-  ++ circuitjs1 (directory)
-   +- various files built by GWT
-   +- circuits (directory, containing example circuits)
-   +- setuplist.txt (index in to example circuit directory)
-```
+The web application can be compiled and run locally in a local docker container.
+We recommend running it on containers as this tool uses specific versions of Gradle only accessible through their github repo. 
 
 ## Docker/podman containers
 
 ### Building and Running Circuitjs in docker containers
 
-*(replace the podman command with docker if you prefere docker)*
+*(replace the podman command with docker if you prefer docker)*
 
 - To build Docker image using podman: 
 
@@ -113,12 +82,12 @@ podman build -f circuitjs1.Containerfile -t circuitjs1:latest
 podman run --name=circuitjs1 --rm -d -p 8000:8000 circuitjs1:latest
 ```
 
-CircuitJS1 should be accessable at: http://localhost:8000/circuitjs.html
+CircuitJS1 should be accessible at: http://localhost:8000/circuitjs.html
 
 
 ### Development using docker containers
 
-(replace the podman command with docker if you prefere docker)
+(replace the podman command with docker if you prefer docker)
 
 - To build the development Docker image using podman: 
 
@@ -126,22 +95,15 @@ CircuitJS1 should be accessable at: http://localhost:8000/circuitjs.html
 podman build -f dev-start.Containerfile -t circuitjs1-dev:latest
 ```
 
-- To then run the development Docker image using podman:
-
-```
-podman run --rm -it -p 127.0.0.1:8000:8000/tcp -p 127.0.0.1:9876:9876/tcp circuitjs1-dev:latest
-```
-
-CircuitJS1 should be accessable at: http://localhost:8000/circuitjs.html
+CircuitJS1 should be accessible at: http://localhost:8000/circuitjs.html
 
 If you need to modify the files while the container is running (using the gwt auto-build method):
 
 ```
-podman run --rm -it -v $(pwd):/src:Z  -p 127.0.0.1:8000:8000/tcp -p 127.0.0.1:9876:9876/tcp  circuitjs1-dev:latest
+podman run --rm -it --env-file .env -v $(pwd):/src:Z  --network host circuitjs1-dev:latest
 ```
 
 This will use the current directory inside the container.
-
 
 
 ## Embedding
