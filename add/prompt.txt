@@ -57,6 +57,64 @@ o 38 64 0 6 5.0 9.765625E-5 0
 
 
 ======================================================================
+INDEX: 233
+CIRCUIT NAME: Synchronous Counter
+DESCRIPTION: Binary counter where all flip-flops share the same clock
+CATEGORY: digital-sequential
+KEYWORDS: synchronous counter, binary, digital
+======================================================================
+CIRCUIT TEXT:
+$ 3 5.0E-6 10 50 5.0
+156 80 272 128 272 0 0.0
+156 208 272 240 272 0 5.0
+156 336 272 368 272 0 0.0
+156 464 272 480 272 0 5.0
+w 464 272 448 272 0
+w 448 272 448 336 0
+w 448 336 464 336 0
+w 320 336 336 336 0
+w 320 336 320 272 0
+w 320 272 336 272 0
+w 208 272 192 272 0
+w 192 272 192 336 0
+w 192 336 208 336 0
+w 80 272 64 272 0
+w 64 272 64 336 0
+w 64 336 80 336 0
+w 560 272 560 88 0
+w 432 272 432 112 0
+w 176 272 176 160 0
+M 560 88 592 88 2 2.5
+R 64 272 32 272 0 0 40.0 5.0 0.0
+R 80 384 32 384 1 2 200.0 2.5 2.5
+w 80 304 80 384 0
+w 176 272 192 272 0
+w 80 384 208 384 0
+w 208 384 208 304 0
+w 336 304 336 384 0
+w 336 384 208 384 0
+w 336 384 464 384 0
+w 464 384 464 304 0
+150 336 200 336 272 1 2 0.0
+w 304 272 304 136 0
+w 304 136 328 136 0
+w 328 136 328 200 0
+w 344 160 344 200 0
+w 176 160 344 160 0
+150 464 200 464 272 1 3 0.0
+w 344 160 472 160 0
+w 472 160 472 200 0
+w 328 136 464 136 0
+w 464 136 464 200 0
+w 432 112 456 112 0
+w 456 112 456 200 0
+M 472 160 592 160 2 2.5
+M 464 136 592 136 2 2.5
+M 456 112 592 112 2 2.5
+
+
+
+======================================================================
 INDEX: 66
 CIRCUIT NAME: 8-Bit Binary Counter
 DESCRIPTION: 8-bit synchronous binary counter circuit
@@ -156,138 +214,22 @@ o 62 64 0 6 5.0 9.765625E-5 0
 
 
 ======================================================================
-INDEX: 78
-CIRCUIT NAME: Decade Counter
-DESCRIPTION: Decimal (0–9) counter circuit
+INDEX: 89
+CIRCUIT NAME: Divide-by-2 Counter
+DESCRIPTION: Flip-flop circuit dividing input frequency by 2
 CATEGORY: digital-sequential
-KEYWORDS: decade counter, BCD, sequential, digital
+KEYWORDS: frequency divider, divide by 2, flip-flop, digital
 ======================================================================
 CIRCUIT TEXT:
-$ 3 5.0E-6 13 50 5.0
-156 72 248 128 248 0 5.0
-156 208 248 240 248 0 0.0
-156 336 248 368 248 0 0.0
-156 464 248 480 248 0 0.0
-w 448 312 464 312 0
-w 320 312 336 312 0
-w 320 312 320 248 0
-w 320 248 336 248 0
-w 72 248 56 248 0
-w 56 248 56 312 0
-w 56 312 72 312 0
-w 432 248 432 88 0
-M 560 64 592 64 2 2.5
-R 56 248 24 248 0 0 40.0 5.0 0.0
-R 72 360 24 360 1 2 200.0 2.5 2.5
-w 72 280 72 360 0
-w 72 360 208 360 0
-w 208 360 208 280 0
-w 336 280 336 360 0
-w 336 360 208 360 0
-w 336 360 464 360 0
-w 464 360 464 280 0
-150 336 176 336 248 1 2 0.0
-w 304 248 304 112 0
-w 304 112 328 112 0
-w 328 112 328 176 0
-w 344 136 344 176 0
-w 168 136 344 136 0
-150 464 176 464 248 1 3 0.0
-w 344 136 472 136 0
-w 472 136 472 176 0
-w 328 112 464 112 0
-w 464 112 464 176 0
-w 432 88 456 88 0
-w 456 88 456 176 0
-M 464 112 592 112 2 2.5
-M 456 88 592 88 2 2.5
-150 192 176 240 176 1 2 5.0
-w 240 176 240 216 0
-w 208 216 208 248 0
-w 208 216 240 216 0
-w 168 248 168 168 0
-w 168 168 192 168 0
-w 168 136 168 168 0
-w 560 312 560 384 0
-w 560 384 184 384 0
-w 184 384 184 184 0
-w 184 184 192 184 0
-w 200 248 208 248 0
-w 200 248 200 312 0
-w 200 312 208 312 0
-150 512 160 512 208 1 2 0.0
-w 472 136 504 136 0
-w 504 136 504 160 0
-w 560 64 560 160 0
-w 560 160 520 160 0
-w 560 160 560 248 0
-w 512 208 584 208 0
-w 584 208 584 344 0
-w 584 344 448 344 0
-w 448 344 448 312 0
-M 504 136 592 136 2 2.5
-o 12 64 0 6 5.0 9.765625E-5 0
-o 36 64 0 6 5.0 9.765625E-5 0
-o 35 64 0 6 5.0 9.765625E-5 0
-o 61 64 0 6 5.0 9.765625E-5 0
-
-
-
-======================================================================
-INDEX: 233
-CIRCUIT NAME: Synchronous Counter
-DESCRIPTION: Binary counter where all flip-flops share the same clock
-CATEGORY: digital-sequential
-KEYWORDS: synchronous counter, binary, digital
-======================================================================
-CIRCUIT TEXT:
-$ 3 5.0E-6 10 50 5.0
-156 80 272 128 272 0 0.0
-156 208 272 240 272 0 5.0
-156 336 272 368 272 0 0.0
-156 464 272 480 272 0 5.0
-w 464 272 448 272 0
-w 448 272 448 336 0
-w 448 336 464 336 0
-w 320 336 336 336 0
-w 320 336 320 272 0
-w 320 272 336 272 0
-w 208 272 192 272 0
-w 192 272 192 336 0
-w 192 336 208 336 0
-w 80 272 64 272 0
-w 64 272 64 336 0
-w 64 336 80 336 0
-w 560 272 560 88 0
-w 432 272 432 112 0
-w 176 272 176 160 0
-M 560 88 592 88 2 2.5
-R 64 272 32 272 0 0 40.0 5.0 0.0
-R 80 384 32 384 1 2 200.0 2.5 2.5
-w 80 304 80 384 0
-w 176 272 192 272 0
-w 80 384 208 384 0
-w 208 384 208 304 0
-w 336 304 336 384 0
-w 336 384 208 384 0
-w 336 384 464 384 0
-w 464 384 464 304 0
-150 336 200 336 272 1 2 0.0
-w 304 272 304 136 0
-w 304 136 328 136 0
-w 328 136 328 200 0
-w 344 160 344 200 0
-w 176 160 344 160 0
-150 464 200 464 272 1 3 0.0
-w 344 160 472 160 0
-w 472 160 472 200 0
-w 328 136 464 136 0
-w 464 136 464 200 0
-w 432 112 456 112 0
-w 456 112 456 200 0
-M 472 160 592 160 2 2.5
-M 464 136 592 136 2 2.5
-M 456 112 592 112 2 2.5
+$ 1 5.0E-6 10 50 5.0
+155 272 96 320 96 0 0.0
+R 272 128 208 128 1 2 100.0 2.5 2.5
+w 368 160 368 64 0
+w 368 64 272 64 0
+w 272 64 272 96 0
+M 368 96 448 96 0
+o 1 64 0 14 5.0 9.765625E-5 0
+o 5 64 0 14 5.0 9.765625E-5 0
 
 
 
@@ -333,9 +275,9 @@ M 512 320 560 320 0 2.5
 
 
 ================ USER QUERY ================
-Create a 4 Bit Binary counter
+generate a 4-bit binary counter
 
-The objective is to generate a circuit design based on the user’s specifications while maintaining the integrity of the original circuit design. 
+The objective is to generate a circuit design based on the user's specifications while maintaining the integrity of the original circuit design. 
 
 You have to follow these steps:  
 1. Analyze the provided base circuit text thoroughly.  
@@ -349,7 +291,7 @@ You have to follow these steps:
 
 Avoid any hallucination, and focus on providing accurate and well-structured circuit text. 
 
-The final deliverable should be the updated circuit text based on the user’s specifications without additional explanations.
+The final deliverable should be the updated circuit text based on the user's specifications without additional explanations.
 
 Make sure to follow these guidelines for clarity:  
 - Use proper node connections.
@@ -358,5 +300,5 @@ Make sure to follow these guidelines for clarity:
 - Adjust component positions based on the original circuit layout.
 - Dont cross wires over any component
 
-I want you to provide the finalized circuit text for the user’s query:  
-Create a 4 Bit Binary counter
+I want you to provide the finalized circuit text for the user's query:  
+generate a 4-bit binary counter

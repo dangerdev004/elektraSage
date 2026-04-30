@@ -1,6 +1,6 @@
 """
 Flask API Server for RAG-based Circuit Generation
-Wraps the rag_inference_groq.py logic as a REST API endpoint
+Wraps the rag_inference.py logic as a REST API endpoint
 """
 
 from flask import Flask, request, jsonify
@@ -10,30 +10,78 @@ from sklearn.metrics.pairwise import cosine_similarity
 import joblib
 import numpy as np
 import os
-from groq import Groq
+from ollama import Client
 from query_preprocessor import preprocess_query
 import traceback
+import re
+import pandas as pd
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for browser access
 
-# Retrieve the Groq API key from environment variable
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+# Retrieve the Ollama API key from environment variable
+OLLAMA_API_KEY = os.environ.get("OLLAMA_API_KEY")
 
 # Embeddings Path
 EMBEDDINGS_PATH = os.environ.get(
     "EMBEDDINGS_PATH",
     "/src/add/embeddings.joblib"
+    # "embeddings.joblib"
+)
+
+# Create a single shared Ollama client
+ollama_client = Client(
+    host='https://ollama.com',
+    headers={'Authorization': 'Bearer ' + (OLLAMA_API_KEY or '')}
 )
 
 # Load the saved embedded data at startup
 print("Loading embeddings...")
 try:
-    df = joblib.load(EMBEDDINGS_PATH)
-    print(f"Embeddings loaded successfully. {len(df)} circuits available.")
+    data = joblib.load(EMBEDDINGS_PATH)
+
+    # Handle both formats:
+    # Format A (dict): {"df": <DataFrame>, "model": "..."}
+    # Format B (plain DataFrame): <DataFrame>
+    if isinstance(data, dict):
+        df = data["df"]
+        model_name = data.get("model", "unknown")
+    elif isinstance(data, pd.DataFrame):
+        df = data
+        model_name = "unknown"
+    else:
+        raise ValueError(f"Unexpected embeddings format: {type(data)}")
+
+    print(f"Embeddings loaded successfully. Model: {model_name} | Circuits: {len(df)}")
 except Exception as e:
     print(f"Error loading embeddings: {e}")
     df = None
+
+
+def clean_circuit_response(response: str) -> str:
+    """Remove markdown code fences if LLM wraps output in them"""
+    response = response.strip()
+    response = re.sub(r'^```[^\n]*\n', '', response)
+    response = re.sub(r'\n```$', '', response)
+    return response.strip()
+
+
+def validate_circuit_text(text: str) -> tuple:
+    """Basic Falstad circuit text validation"""
+    lines = text.strip().splitlines()
+
+    if not lines:
+        return False, "Empty response"
+
+    if not lines[0].startswith("$"):
+        return False, f"Missing sim config line, got: {lines[0][:50]}"
+
+    component_lines = [l for l in lines if l and not l.startswith(('w ', 'o ', '$'))]
+    if len(component_lines) < 2:
+        return False, "Too few components"
+
+    return True, "OK"
+
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -41,8 +89,10 @@ def health_check():
     return jsonify({
         "status": "ok",
         "embeddings_loaded": df is not None,
-        "circuits_available": len(df) if df is not None else 0
+        "circuits_available": len(df) if df is not None else 0,
+        "llm_model": "mistral-large-3:675b-cloud"
     })
+
 
 @app.route('/query', methods=['POST'])
 def query_circuit():
@@ -58,47 +108,55 @@ def query_circuit():
                 "success": False,
                 "error": "Missing 'query' field in request body"
             }), 400
-        
+
         incoming_query = request.json['query'].strip()
-        
+
         if not incoming_query:
             return jsonify({
                 "success": False,
                 "error": "Query cannot be empty"
             }), 400
-        
+
         if df is None:
             return jsonify({
                 "success": False,
                 "error": "Embeddings not loaded. Please check server startup logs."
             }), 500
-        
+
         print(f"\n{'='*70}")
         print(f"Received query: {incoming_query}")
         print(f"{'='*70}")
-        
+
         # Extract keywords for better retrieval
         print("Preprocessing query...")
-        query_keywords = preprocess_query(incoming_query, GROQ_API_KEY)
+        query_keywords = preprocess_query(incoming_query, OLLAMA_API_KEY)
         print(f"Extracted keywords: {query_keywords}")
-        
+
         # Embed the KEYWORDS instead of the full query
         print("Vector embedding keywords...")
         query_embedded = chunks_embed.vector_embedding(query_keywords)[0]
-        
+
         # Cosine similarity checking
         print("Computing similarities...")
         similarities = cosine_similarity(np.vstack(df["embedding"]), [query_embedded]).flatten()
-        
-        # Consider top 5 results
+
+        # Consider top 5 results with similarity threshold
+        SIMILARITY_THRESHOLD = 0.4
         top_result = 5
-        max_indx = similarities.argsort()[::-1][0:top_result]
-        
+        max_indx = similarities.argsort()[::-1][:top_result]
+
+        # Filter by threshold
+        filtered_indx = [i for i in max_indx if similarities[i] >= SIMILARITY_THRESHOLD]
+
+        # Fallback: always send at least 1 result
+        if not filtered_indx:
+            filtered_indx = [max_indx[0]]
+
         # Format the retrieved circuits with rich metadata
-        new_df = df.loc[max_indx]
+        new_df = df.loc[filtered_indx]
         circuit_context = ""
-        
-        print(f"\nTop {top_result} relevant circuits:")
+
+        print(f"\nTop relevant circuits:")
         retrieved_circuits = []
         for idx, row in new_df.iterrows():
             similarity_score = similarities[idx]
@@ -107,7 +165,7 @@ def query_circuit():
                 "name": row['name'],
                 "similarity": float(similarity_score)
             })
-            
+
             circuit_context += f"""
 {'='*70}
 INDEX: {idx}
@@ -120,7 +178,7 @@ CIRCUIT TEXT:
 {row['text']}
 
 """
-        
+
         # Build the prompt
         prompt = f"""
 You are a **RAG-based Circuit Simulator** using Falstad circuit text files. The base circuit text retrieve is provided below:  
@@ -154,57 +212,69 @@ Make sure to follow these guidelines for clarity:
 
 I want you to provide the finalized circuit text for the user's query:  
 {incoming_query}
+
+STRICT OUTPUT RULES:
+- Output ONLY the raw Falstad circuit text
+- Start directly with the $ simulation line
+- Do NOT include markdown, code fences, or any explanation before or after
 """
-        
-        # Call Groq API
-        print("Calling Groq API for circuit generation...")
-        client = Groq(api_key=GROQ_API_KEY)
-        
-        chat_completion = client.chat.completions.create(
+
+        # Call Ollama API for circuit generation
+        print("Calling Ollama for circuit generation...")
+        chat_completion = ollama_client.chat(
+            model='mistral-large-3:675b-cloud',
             messages=[
                 {
                     "role": "user",
                     "content": prompt,
                 }
             ],
-            model="llama-3.3-70b-versatile",
-            temperature=0.1,
-            max_tokens=8000,
+            options={
+                "temperature": 0.1,
+                "num_predict": 8000,
+            }
         )
-        
+
         # Get response
-        response = chat_completion.choices[0].message.content
-        
+        response = chat_completion.message.content
+
         # Clean response (remove markdown if present)
-        response = response.strip()
-        circuit_text = response
-        if response.startswith("```"):
-            lines = response.split('\n')
-            circuit_text = '\n'.join([l for l in lines if not l.startswith("```")])
-        
+        circuit_text = clean_circuit_response(response)
+
+        # Validate the circuit text
+        is_valid, reason = validate_circuit_text(circuit_text)
+        if not is_valid:
+            print(f"WARNING: Circuit validation failed: {reason}")
+
         print("\n" + "="*70)
         print("CIRCUIT GENERATED SUCCESSFULLY")
         print("="*70)
-        
-        return jsonify({
+
+        result = {
             "success": True,
             "response": "Circuit generated successfully! You can import it into the simulator.",
             "circuit_text": circuit_text,
             "retrieved_circuits": retrieved_circuits,
             "keywords": query_keywords
-        })
-        
+        }
+
+        if not is_valid:
+            result["validation_warning"] = reason
+
+        return jsonify(result)
+
     except Exception as e:
         error_msg = str(e)
         error_trace = traceback.format_exc()
         print(f"\nError processing query: {error_msg}")
         print(error_trace)
-        
+
         return jsonify({
             "success": False,
             "error": error_msg,
             "trace": error_trace if app.debug else None
         }), 500
+
 
 @app.route('/simple-query', methods=['POST'])
 def simple_query():
@@ -219,21 +289,19 @@ def simple_query():
                 "success": False,
                 "error": "Missing 'query' field in request body"
             }), 400
-        
+
         incoming_query = request.json['query'].strip()
-        
+
         if not incoming_query:
             return jsonify({
                 "success": False,
                 "error": "Query cannot be empty"
             }), 400
-        
-        # For simple questions, just use Groq directly without RAG
+
         print(f"Simple query: {incoming_query}")
-        
-        client = Groq(api_key=GROQ_API_KEY)
-        
-        chat_completion = client.chat.completions.create(
+
+        chat_completion = ollama_client.chat(
+            model='mistral-large-3:675b-cloud',
             messages=[
                 {
                     "role": "system",
@@ -244,32 +312,34 @@ def simple_query():
                     "content": incoming_query,
                 }
             ],
-            model="llama-3.3-70b-versatile",
-            temperature=0.5,
-            max_tokens=500,
+            options={
+                "temperature": 0.5,
+                "num_predict": 500,
+            }
         )
-        
-        response = chat_completion.choices[0].message.content
-        
+
+        response = chat_completion.message.content
+
         return jsonify({
             "success": True,
             "response": response
         })
-        
+
     except Exception as e:
         error_msg = str(e)
         print(f"Error processing simple query: {error_msg}")
-        
+
         return jsonify({
             "success": False,
             "error": error_msg
         }), 500
 
+
 if __name__ == '__main__':
-    if not GROQ_API_KEY:
-        print("WARNING: GROQ_API_KEY not set in environment variables!")
-        print("Please set it with: export GROQ_API_KEY='your-key-here'")
-    
+    if not OLLAMA_API_KEY:
+        print("WARNING: OLLAMA_API_KEY not set in environment variables!")
+        print("Please set it with: export OLLAMA_API_KEY='your-key-here'")
+
     print("\n" + "="*70)
     print("RAG API Server Starting...")
     print("="*70)
@@ -278,6 +348,6 @@ if __name__ == '__main__':
     print("  POST /query         - Generate circuit from query (RAG)")
     print("  POST /simple-query  - Answer simple questions (no RAG)")
     print("="*70 + "\n")
-    
+
     # Run server
     app.run(host='0.0.0.0', port=5000, debug=True)
