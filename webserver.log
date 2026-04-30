@@ -1,5 +1,10 @@
-127.0.0.1 - - [29/Jan/2026 06:43:27] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
-127.0.0.1 - - [29/Jan/2026 06:43:56] "GET /circuitjs.html HTTP/1.1" 304 -
-127.0.0.1 - - [29/Jan/2026 06:44:05] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-127.0.0.1 - - [29/Jan/2026 06:44:05] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-127.0.0.1 - - [29/Jan/2026 06:44:05] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+127.0.0.1 - - [30/Apr/2026 17:25:33] "GET /circuitjs.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Apr/2026 17:25:33] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+127.0.0.1 - - [30/Apr/2026 17:25:33] "GET /circuitjs.html HTTP/1.1" 304 -
+127.0.0.1 - - [30/Apr/2026 17:25:33] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 304 -
+127.0.0.1 - - [30/Apr/2026 17:25:38] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+127.0.0.1 - - [30/Apr/2026 17:25:38] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+127.0.0.1 - - [30/Apr/2026 17:25:38] "GET /circuitjs1/setuplist.txt HTTP/1.1" 304 -
+127.0.0.1 - - [30/Apr/2026 17:25:38] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
+127.0.0.1 - - [30/Apr/2026 17:25:38] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 304 -
+127.0.0.1 - - [30/Apr/2026 17:25:40] "GET /circuitjs1/circuits/blank.txt HTTP/1.1" 200 -

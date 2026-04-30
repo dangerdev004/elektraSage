@@ -1,18 +1,20 @@
 Turning off precompile in incremental mode.
 Super Dev Mode starting up
-   workDir: /tmp/gwt-codeserver-2312530970382117568.tmp
+   workDir: /tmp/gwt-codeserver-7651025397267524229.tmp
    Loading inherited module 'com.lushprojects.circuitjs1.circuitjs1'
       [WARN] Line 13: Setting configuration property named 'jsinterop.checks' in module 'com.lushprojects.circuitjs1.circuitjs1' that has not been previously defined
    Loading Java files in com.lushprojects.circuitjs1.circuitjs1.
    Ignored 80 units with compilation errors in first pass.
 Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
-   Module setup completed in 17469 ms
+   Module setup completed in 7089 ms
 
-The code server is ready at http://127.0.1.1:9876/
+The code server is ready at http://10.20.189.110:9876/
 GET /recompile/circuitjs1
-   Job com.lushprojects.circuitjs1.circuitjs1_1_0
-      starting job: com.lushprojects.circuitjs1.circuitjs1_1_0
-      binding: user.agent=safari
+   Job com.lushprojects.circuitjs1.circuitjs1_1_1
+GET /recompile/circuitjs1
+         starting job: com.lushprojects.circuitjs1.circuitjs1_1_1
+Job com.lushprojects.circuitjs1.circuitjs1_1_0
+      binding: user.agent=gecko1_8
       Compiling module com.lushprojects.circuitjs1.circuitjs1
          Ignored 80 units with compilation errors in first pass.
 Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
@@ -22,18 +24,22 @@ Compile with -strict or with -logLevel set to TRACE or DEBUG to see all errors.
                   [WARN] Detected warnings related to 'com.google.gwt.editor.client.SimpleBeanEditorDriver'.   Are validation-api-<version>.jar and validation-api-<version>-sources.jar on the classpath?
                   Specify -logLevel DEBUG to see all errors.
                   [WARN] Unknown type 'com.google.gwt.editor.client.SimpleBeanEditorDriver' specified in deferred binding rule
-         Unification traversed 29376 fields and methods and 2424 types. 2389 are considered part of the current module and 2389 had all of their fields and methods traversed.
+         Unification traversed 28565 fields and methods and 2369 types. 2335 are considered part of the current module and 2335 had all of their fields and methods traversed.
          Warnings in com/google/gwt/emul/java/util/Arrays.java
             [WARN] Line 1782: [unusable-by-js] Type of parameter 'd1' in 'int Arrays.1methodref$compare$Type.compare(long, long)' is not usable by but exposed to JavaScript.
             [WARN] Line 1782: [unusable-by-js] Type of parameter 'd2' in 'int Arrays.1methodref$compare$Type.compare(long, long)' is not usable by but exposed to JavaScript.
          [WARN] Suppress "[unusable-by-js]" warnings by adding a `@SuppressWarnings("unusable-by-js")` annotation to the corresponding member.
          Compiling 1 permutation
             Compiling permutation 0...
-            Linking per-type JS with 2368 new/changed types.
+            Linking per-type JS with 2314 new/changed types.
             Source Maps Enabled
          Compile of permutations succeeded
-         Compilation succeeded -- 7.539s
-      Linking into /tmp/gwt-codeserver-2312530970382117568.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-2/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-2312530970382117568.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-2/extras/circuitjs1
+         Compilation succeeded -- 4.107s
+      Linking into /tmp/gwt-codeserver-7651025397267524229.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-2/war/circuitjs1; Writing extras to /tmp/gwt-codeserver-7651025397267524229.tmp/com.lushprojects.circuitjs1.circuitjs1/compile-2/extras/circuitjs1
          Link succeeded
-         Linking succeeded -- 0.405s
-      8.058s total -- Compile completed
+         Linking succeeded -- 0.185s
+      4.346s total -- Compile completed
+      starting job: com.lushprojects.circuitjs1.circuitjs1_1_0
+      binding: user.agent=gecko1_8
+      skipped compile because no input files have changed
+      0.018s total -- Compile completed
