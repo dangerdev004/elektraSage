@@ -115,9 +115,9 @@ def summing_amplifier(
         if not math.isfinite(value) or value <= 0:
             raise ValueError(f"{name} must be a finite value > 0, got {value!r}")
 
-    R = resistors_approximation.resistors_approximation(R_TARGET_OHMS)
+    R = resistors_approximation(R_TARGET_OHMS)
     ideal_Rf = gain_v_per_v * R
-    Rf = resistors_approximation.resistors_approximation(ideal_Rf)
+    Rf = resistors_approximation(ideal_Rf)
     actual_gain = Rf / R
 
     if not math.isclose(actual_gain, gain_v_per_v, rel_tol=_EXACT_REL_TOL):
