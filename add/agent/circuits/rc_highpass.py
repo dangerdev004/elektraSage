@@ -1,4 +1,4 @@
-"""Generate a Falstad (CircuitJS) passive RC low-pass filter netlist."""
+"""Generate a Falstad (CircuitJS) passive RC high-pass filter netlist."""
 
 import argparse
 import math
@@ -6,26 +6,19 @@ import sys
 import warnings
 
 from . import resistors_approximation
-from . import capacitors_approximation
 
 # Preferred capacitor decades tried in order; the first giving R in
-# [_R_MIN, _R_MAX] wins. Same range and reasoning as rc_phaseshift.py.
+# [_R_MIN, _R_MAX] wins. Same range and reasoning as rc_lowpass.py.
 _CAPS = (1e-12, 10e-12, 100e-12, 1e-9, 10e-9, 100e-9, 1e-6, 10e-6)
 _R_MIN, _R_MAX = 1e3, 100e3
 
-# Everything about the source is fixed rather than exposed as a parameter.
-# "sweep" is CircuitJS's AC Sweep element; its dump format (element type 170,
-# field order min/max frequency, max voltage, sweep time) was confirmed
-# field-for-field against a real exported circuit. What is NOT independently
-# confirmed is that it needs only one electrical terminal (inferred from the
-# reference circuit's second point having no ground wire, the same pattern
-# CircuitJS's own ground symbol uses for its non-electrical leg) - check
-# this in the simulator. If it turns out to need a second, grounded
-# terminal, change _SOURCE to "sine": a fixed-frequency sine source (the
-# ordinary "v" element, used and tested repeatedly elsewhere in this
-# codebase) that needs no unverified assumptions.
+# Everything about the source is fixed rather than exposed as a parameter -
+# see rc_lowpass.py's module docstring for the confidence level behind this
+# (the sweep element's dump format is confirmed field-for-field against a
+# real export; that it needs only one electrical terminal is inferred, not
+# confirmed - change _SOURCE to "sine" if that turns out wrong).
 _SOURCE = "sweep"
-_SWEEP_FLAGS = 3  # matches the reference export; meaning of the bits not decoded
+_SWEEP_FLAGS = 3
 _SWEEP_DECADE_SPAN = 10  # sweep range is [cutoff/this, cutoff*this]
 _SWEEP_MAX_VOLTAGE = 5.0  # V, peak; matches the reference export
 _SWEEP_TIME = 0.1  # s, time for one full sweep; matches the reference export
@@ -48,13 +41,18 @@ def _fmt(x: float) -> str:
     return repr(float(x))
 
 
-def rc_lowpass(cutoff_frequency: float) -> str:
-    """Generate a Falstad-format passive RC low-pass filter circuit.
+def rc_highpass(cutoff_frequency: float) -> str:
+    """Generate a Falstad-format passive RC high-pass filter circuit.
 
-    A plain two-component divider (R in series, C to ground, output taken
-    at the junction; no op amp, no buffering):
+    A plain two-component divider - the mirror image of rc_lowpass.py's
+    circuit, with C and R swapped: C in series from the source, then R from
+    that junction to ground, output taken at the junction (no op amp, no
+    buffering):
 
-        Vout/Vin = 1 / (1 + j*2*pi*f*R*C),  f_c = 1 / (2*pi*R*C)
+        Vout/Vin = j*2*pi*f*R*C / (1 + j*2*pi*f*R*C),  f_c = 1 / (2*pi*R*C)
+
+    This attenuates low frequencies and passes high ones, the opposite of
+    rc_lowpass.py's response, using the same cutoff formula.
 
     C is a preferred decade value chosen so the resulting R lands in a
     practical 1 kOhm-100 kOhm range; R is then the standard value nearest
@@ -127,11 +125,14 @@ def rc_lowpass(cutoff_frequency: float) -> str:
         1 / (max(highest_freq, actual_cutoff) * _SAMPLES_PER_PERIOD),
     )
 
+    # C and R swap positions relative to rc_lowpass.py: C is now in series
+    # (source to junction), R is now the shunt to ground. Coordinates match
+    # the reference export exactly.
     lines = [f"$ 1 {_fmt(time_step)} 10 57 5.0", source_line]
     if _SOURCE == "sweep":
         lines += [
-            "r 240 160 400 160 0 " + _fmt(R),
-            "c 400 160 400 288 0 " + _fmt(C) + " 0.0",
+            f"c 240 160 400 160 0 {_fmt(C)} 0.0",
+            f"r 400 160 400 288 0 {_fmt(R)}",
             "g 400 288 400 320 0",
             "O 400 160 512 160 0",
         ]
@@ -139,22 +140,29 @@ def rc_lowpass(cutoff_frequency: float) -> str:
         lines += [
             "g 96 256 96 304 0",
             "w 96 112 192 112 0",
-            f"r 192 112 336 112 0 {_fmt(R)}",
-            f"c 336 112 336 208 0 {_fmt(C)} 0.0",
+            f"c 192 112 336 112 0 {_fmt(C)} 0.0",
+            f"r 336 112 336 208 0 {_fmt(R)}",
             "g 336 208 336 240 0",
             "O 336 112 432 112 0",
         ]
     output_index = next(i for i, l in enumerate(lines[1:]) if l.startswith("O "))
+    r_index = next(i for i, l in enumerate(lines[1:]) if l.startswith("r "))
+    c_index = next(i for i, l in enumerate(lines[1:]) if l.startswith("c "))
     lines += [
         f"o 0 64 0 2 {_fmt(scope_scale)} 9.765625E-5",
         f"o {output_index} 64 0 2 {_fmt(scope_scale)} 9.765625E-5",
+        # HINT_3DB_C: tells the simulator to display this R/C pair's -3 dB
+        # frequency on the schematic. Format confirmed from two matching
+        # reference exports (same "h 3 <r> <c>" pattern in both); purely a
+        # display hint, so removing this line changes nothing electrically.
+        f"h 3 {r_index} {c_index}",
     ]
     return "\n".join(lines) + "\n"
 
 
 def _main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        description="Generate a CircuitJS passive RC low-pass filter netlist on stdout."
+        description="Generate a CircuitJS passive RC high-pass filter netlist on stdout."
     )
     parser.add_argument("cutoff_frequency", type=float, help="cutoff frequency, Hz (> 0)")
     args = parser.parse_args(argv)
@@ -162,7 +170,7 @@ def _main(argv: list[str] | None = None) -> None:
     try:
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
-            netlist = rc_lowpass(args.cutoff_frequency)
+            netlist = rc_highpass(args.cutoff_frequency)
     except ValueError as exc:
         parser.error(str(exc))
     for w in caught:  # keep stdout clean: netlist only

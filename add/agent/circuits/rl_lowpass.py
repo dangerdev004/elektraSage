@@ -1,4 +1,4 @@
-"""Generate a Falstad (CircuitJS) passive RC low-pass filter netlist."""
+"""Generate a Falstad (CircuitJS) passive RL low-pass filter netlist."""
 
 import argparse
 import math
@@ -6,26 +6,17 @@ import sys
 import warnings
 
 from . import resistors_approximation
-from . import capacitors_approximation
 
-# Preferred capacitor decades tried in order; the first giving R in
-# [_R_MIN, _R_MAX] wins. Same range and reasoning as rc_phaseshift.py.
-_CAPS = (1e-12, 10e-12, 100e-12, 1e-9, 10e-9, 100e-9, 1e-6, 10e-6)
-_R_MIN, _R_MAX = 1e3, 100e3
+# Preferred inductor decades tried in order; the first giving R in
+# [_R_MIN, _R_MAX] wins. Confined to this file, mirroring rc_phaseshift.py's
+# _CAPS - no shared "inductors_approximation" helper exists (or is assumed).
+_INDUCTORS = (1e-6, 10e-6, 100e-6, 1e-3, 10e-3, 100e-3, 1.0)  # H
+_R_MIN, _R_MAX = 10.0, 100e3
 
-# Everything about the source is fixed rather than exposed as a parameter.
-# "sweep" is CircuitJS's AC Sweep element; its dump format (element type 170,
-# field order min/max frequency, max voltage, sweep time) was confirmed
-# field-for-field against a real exported circuit. What is NOT independently
-# confirmed is that it needs only one electrical terminal (inferred from the
-# reference circuit's second point having no ground wire, the same pattern
-# CircuitJS's own ground symbol uses for its non-electrical leg) - check
-# this in the simulator. If it turns out to need a second, grounded
-# terminal, change _SOURCE to "sine": a fixed-frequency sine source (the
-# ordinary "v" element, used and tested repeatedly elsewhere in this
-# codebase) that needs no unverified assumptions.
+# Everything about the source is fixed rather than exposed as a parameter -
+# see rc_lowpass.py's module docstring for the confidence level behind this.
 _SOURCE = "sweep"
-_SWEEP_FLAGS = 3  # matches the reference export; meaning of the bits not decoded
+_SWEEP_FLAGS = 3
 _SWEEP_DECADE_SPAN = 10  # sweep range is [cutoff/this, cutoff*this]
 _SWEEP_MAX_VOLTAGE = 5.0  # V, peak; matches the reference export
 _SWEEP_TIME = 0.1  # s, time for one full sweep; matches the reference export
@@ -35,12 +26,12 @@ _MAX_TIME_STEP = 5e-6  # s
 _SAMPLES_PER_PERIOD = 200
 _EXACT_REL_TOL = 1e-9  # cutoffs closer than this count as exact (float noise)
 
-_F_MIN = 1 / (2 * math.pi * _R_MAX * _CAPS[-1])
-_F_MAX = 1 / (2 * math.pi * _R_MIN * _CAPS[0])
+_F_MIN = _R_MIN / (2 * math.pi * _INDUCTORS[-1])
+_F_MAX = _R_MAX / (2 * math.pi * _INDUCTORS[0])
 
 
 class CutoffErrorWarning(UserWarning):
-    """The standard R and C values give a cutoff different from the request."""
+    """The standard R and L values give a cutoff different from the request."""
 
 
 def _fmt(x: float) -> str:
@@ -48,19 +39,27 @@ def _fmt(x: float) -> str:
     return repr(float(x))
 
 
-def rc_lowpass(cutoff_frequency: float) -> str:
-    """Generate a Falstad-format passive RC low-pass filter circuit.
+def rl_lowpass(cutoff_frequency: float) -> str:
+    """Generate a Falstad-format passive RL low-pass filter circuit.
 
-    A plain two-component divider (R in series, C to ground, output taken
-    at the junction; no op amp, no buffering):
+    A plain two-component divider: L in series from the source, then R from
+    that junction to ground, output taken at the junction (no op amp, no
+    buffering):
 
-        Vout/Vin = 1 / (1 + j*2*pi*f*R*C),  f_c = 1 / (2*pi*R*C)
+        Vout/Vin = R / (R + j*2*pi*f*L),  f_c = R / (2*pi*L)
 
-    C is a preferred decade value chosen so the resulting R lands in a
-    practical 1 kOhm-100 kOhm range; R is then the standard value nearest
-    that ideal value. Because R is snapped, the actual cutoff usually
-    differs slightly from the request; a CutoffErrorWarning reports it
-    when it does.
+    An inductor's impedance grows with frequency, so a series L increasingly
+    blocks high frequencies while passing low ones through to the R shunt -
+    a low-pass, the mirror of rl_highpass.py (which has R in series and L as
+    the shunt). Same cutoff formula as rl_highpass.py, opposite topology and
+    response.
+
+    L is a preferred decade value (see _INDUCTORS) chosen so the resulting R
+    lands in a practical 1 kOhm-100 kOhm range; R is then the standard value
+    nearest that ideal value, via the same resistors_approximation used
+    throughout this codebase. Because R is snapped, the actual cutoff
+    usually differs slightly from the request; a CutoffErrorWarning reports
+    it when it does.
 
     The source, its amplitude/voltage, and (for the sweep source) its
     frequency range are all fixed internally rather than exposed here -
@@ -74,7 +73,7 @@ def rc_lowpass(cutoff_frequency: float) -> str:
 
     Raises:
         ValueError: If cutoff_frequency is not a finite number > 0, or is
-            outside the range the preferred capacitor list can cover.
+            outside the range the preferred inductor list can cover.
 
     Warns:
         CutoffErrorWarning: If the achieved cutoff differs from the request.
@@ -84,8 +83,8 @@ def rc_lowpass(cutoff_frequency: float) -> str:
             f"cutoff_frequency must be a finite value > 0, got {cutoff_frequency!r}"
         )
 
-    for C in _CAPS:
-        R_ideal = 1 / (2 * math.pi * cutoff_frequency * C)
+    for L in _INDUCTORS:
+        R_ideal = 2 * math.pi * cutoff_frequency * L
         if _R_MIN <= R_ideal <= _R_MAX:
             break
     else:
@@ -94,13 +93,13 @@ def rc_lowpass(cutoff_frequency: float) -> str:
             f"supported range ({_F_MIN:.2g} Hz to {_F_MAX:.2g} Hz)"
         )
     R = resistors_approximation.resistors_approximation(R_ideal)
-    actual_cutoff = 1 / (2 * math.pi * R * C)
+    actual_cutoff = R / (2 * math.pi * L)
 
     if not math.isclose(actual_cutoff, cutoff_frequency, rel_tol=_EXACT_REL_TOL):
         error = (actual_cutoff - cutoff_frequency) / cutoff_frequency * 100
         warnings.warn(
             f"requested cutoff {cutoff_frequency:g} Hz, achieved "
-            f"{actual_cutoff:.4g} Hz (R={R:g} ohm, C={C:g} F): "
+            f"{actual_cutoff:.4g} Hz (R={R:g} ohm, L={L:g} H): "
             f"error {error:+.2f}%",
             CutoffErrorWarning,
             stacklevel=2,
@@ -127,11 +126,13 @@ def rc_lowpass(cutoff_frequency: float) -> str:
         1 / (max(highest_freq, actual_cutoff) * _SAMPLES_PER_PERIOD),
     )
 
+    # L takes the series position, R takes the shunt-to-ground position -
+    # the reverse of rl_highpass.py. Coordinates match its reference export.
     lines = [f"$ 1 {_fmt(time_step)} 10 57 5.0", source_line]
     if _SOURCE == "sweep":
         lines += [
-            "r 240 160 400 160 0 " + _fmt(R),
-            "c 400 160 400 288 0 " + _fmt(C) + " 0.0",
+            f"l 240 160 400 160 0 {_fmt(L)} 0.0",
+            f"r 400 160 400 288 0 {_fmt(R)}",
             "g 400 288 400 320 0",
             "O 400 160 512 160 0",
         ]
@@ -139,22 +140,29 @@ def rc_lowpass(cutoff_frequency: float) -> str:
         lines += [
             "g 96 256 96 304 0",
             "w 96 112 192 112 0",
-            f"r 192 112 336 112 0 {_fmt(R)}",
-            f"c 336 112 336 208 0 {_fmt(C)} 0.0",
+            f"l 192 112 336 112 0 {_fmt(L)} 0.0",
+            f"r 336 112 336 208 0 {_fmt(R)}",
             "g 336 208 336 240 0",
             "O 336 112 432 112 0",
         ]
     output_index = next(i for i, l in enumerate(lines[1:]) if l.startswith("O "))
+    r_index = next(i for i, l in enumerate(lines[1:]) if l.startswith("r "))
+    l_index = next(i for i, l in enumerate(lines[1:]) if l.startswith("l "))
     lines += [
         f"o 0 64 0 2 {_fmt(scope_scale)} 9.765625E-5",
         f"o {output_index} 64 0 2 {_fmt(scope_scale)} 9.765625E-5",
+        # HINT_3DB_L (type 5), self-consistent with this file's own element
+        # positions - the reference export's equivalent line had an index
+        # that didn't match its own element count, so it wasn't copied
+        # verbatim. Cosmetic only; delete this line if it causes any issue.
+        f"h 5 {r_index} {l_index}",
     ]
     return "\n".join(lines) + "\n"
 
 
 def _main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        description="Generate a CircuitJS passive RC low-pass filter netlist on stdout."
+        description="Generate a CircuitJS passive RL low-pass filter netlist on stdout."
     )
     parser.add_argument("cutoff_frequency", type=float, help="cutoff frequency, Hz (> 0)")
     args = parser.parse_args(argv)
@@ -162,7 +170,7 @@ def _main(argv: list[str] | None = None) -> None:
     try:
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
-            netlist = rc_lowpass(args.cutoff_frequency)
+            netlist = rl_lowpass(args.cutoff_frequency)
     except ValueError as exc:
         parser.error(str(exc))
     for w in caught:  # keep stdout clean: netlist only

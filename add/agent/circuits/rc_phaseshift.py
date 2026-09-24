@@ -14,7 +14,7 @@ import math
 import sys
 import warnings
 
-import resistors_approximation
+from . import resistors_approximation
 
 DEFAULT_SUPPLY = 15.0  # V; +/- output limit, which also sets the oscillation amplitude
 DEFAULT_GBW = 1e6      # Hz; written to the netlist for file-format
