@@ -6,7 +6,7 @@ import sys
 import warnings
 from typing import Literal
 
-import resistors_approximation
+from . import resistors_approximation
 
 # Waveform codes for the "R" (1-terminal rail source) element's flat-dump
 # format - same codes and confidence levels as differentiator.py's "v"
