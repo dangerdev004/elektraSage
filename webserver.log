@@ -1,14 +1,8 @@
-127.0.0.1 - - [24/Sep/2026 19:52:38] "GET /circuitjs.html HTTP/1.1" 304 -
-127.0.0.1 - - [24/Sep/2026 19:52:38] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
-127.0.0.1 - - [24/Sep/2026 19:52:38] "GET /circuitjs.html HTTP/1.1" 304 -
-127.0.0.1 - - [24/Sep/2026 19:52:38] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 304 -
-127.0.0.1 - - [24/Sep/2026 19:52:39] "GET /circuitjs.html HTTP/1.1" 304 -
-127.0.0.1 - - [24/Sep/2026 19:52:39] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 304 -
-127.0.0.1 - - [24/Sep/2026 19:52:49] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
-127.0.0.1 - - [24/Sep/2026 19:52:49] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
-127.0.0.1 - - [24/Sep/2026 19:52:49] "GET /circuitjs1/setuplist.txt HTTP/1.1" 304 -
-127.0.0.1 - - [24/Sep/2026 19:52:49] "GET /circuitjs1/setuplist.txt HTTP/1.1" 304 -
-127.0.0.1 - - [24/Sep/2026 19:52:49] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -
-127.0.0.1 - - [24/Sep/2026 19:52:49] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 304 -
-127.0.0.1 - - [24/Sep/2026 19:52:49] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 304 -
-127.0.0.1 - - [24/Sep/2026 19:52:49] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 304 -
+127.0.0.1 - - [24/Sep/2026 20:01:53] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [24/Sep/2026 20:02:06] code 404, message File not found
+127.0.0.1 - - [24/Sep/2026 20:02:06] "GET /circuitjs1.html HTTP/1.1" 404 -
+127.0.0.1 - - [24/Sep/2026 20:02:11] "GET /circuitjs.html HTTP/1.1" 304 -
+127.0.0.1 - - [24/Sep/2026 20:02:11] "GET /circuitjs1/circuitjs1.nocache.js HTTP/1.1" 200 -
+127.0.0.1 - - [24/Sep/2026 20:02:21] "GET /circuitjs1/setuplist.txt HTTP/1.1" 200 -
+127.0.0.1 - - [24/Sep/2026 20:02:21] "GET /circuitjs1/clear.cache.gif HTTP/1.1" 200 -
+127.0.0.1 - - [24/Sep/2026 20:02:21] "GET /circuitjs1/circuits/lrc.txt HTTP/1.1" 200 -

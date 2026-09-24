@@ -39,6 +39,8 @@ import com.google.gwt.http.client.RequestBuilder;
 import com.google.gwt.http.client.RequestCallback;
 import com.google.gwt.http.client.RequestException;
 import com.google.gwt.http.client.Response;
+import com.google.gwt.http.client.URL;
+import com.google.gwt.json.client.JSONArray;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONParser;
 import com.google.gwt.json.client.JSONString;
@@ -65,7 +67,28 @@ public class AIChatbotDialog extends Dialog {
     
     // Conversation id issued by the server; lets the agent remember earlier turns
     // (e.g. it asks for a missing cutoff frequency, then you answer it).
+    // Also kept in sessionStorage, so closing and reopening the dialog (or
+    // reloading the page) resumes the same conversation. The server keeps the
+    // transcript (add/output/sessions/<id>.json) and serves it via /history.
     private String sessionId = null;
+    private static final String SESSION_KEY = "elektrasage_chat_session";
+    private static final String CIRCUIT_HINT = "<br/><br/><b>Circuit generated!</b> Click 'Import Circuit' to load it into the simulator.";
+    
+    private static native String storageGet(String key) /*-{
+        try { return $wnd.sessionStorage.getItem(key); } catch (e) { return null; }
+    }-*/;
+    
+    private static native void storageSet(String key, String value) /*-{
+        try {
+            if (value == null) { $wnd.sessionStorage.removeItem(key); }
+            else { $wnd.sessionStorage.setItem(key, value); }
+        } catch (e) {}
+    }-*/;
+    
+    private void setSessionId(String id) {
+        sessionId = id;
+        storageSet(SESSION_KEY, id);
+    }
 	
     public AIChatbotDialog(CirSim asim) {
         super();
@@ -163,6 +186,12 @@ public class AIChatbotDialog extends Dialog {
         
         this.center();
         show();
+        
+        // Resume this browser session's conversation, if there is one
+        sessionId = storageGet(SESSION_KEY);
+        if (sessionId != null) {
+            loadHistory();
+        }
     }
     
     private void sendMessage() {
@@ -225,7 +254,7 @@ public class AIChatbotDialog extends Dialog {
                                 // Remember the conversation id for follow-up messages
                                 JSONValue sid = jsonObj.get("session_id");
                                 if (sid != null && sid.isString() != null) {
-                                    sessionId = sid.isString().stringValue();
+                                    setSessionId(sid.isString().stringValue());
                                 }
                                 
                                 JSONValue successValue = jsonObj.get("success");
@@ -243,7 +272,7 @@ public class AIChatbotDialog extends Dialog {
                                     if (circuitValue != null && circuitValue.isString() != null) {
                                         lastCircuitText = circuitValue.isString().stringValue();
                                         importButton.setEnabled(true);
-                                        responseText += "<br/><br/><b>Circuit generated!</b> Click 'Import Circuit' to load it into the simulator.";
+                                        responseText += CIRCUIT_HINT;
                                     }
                                     
                                     addMessageToChat("AI Assistant", responseText, true);
@@ -370,6 +399,75 @@ public class AIChatbotDialog extends Dialog {
                 .replaceAll("`([^`]+)`", "<code>$1</code>");
     }
     
+    // Fetch the saved transcript for this session and redraw it in the chat.
+    private void loadHistory() {
+        String url = RAG_API_URL + "/history/" + URL.encodePathSegment(sessionId);
+        RequestBuilder builder = new RequestBuilder(RequestBuilder.GET, url);
+        builder.setTimeoutMillis(10000);
+        
+        try {
+            builder.sendRequest(null, new RequestCallback() {
+                public void onResponseReceived(Request request, Response response) {
+                    if (response.getStatusCode() != 200) {
+                        return;
+                    }
+                    try {
+                        JSONObject obj = JSONParser.parseStrict(response.getText()).isObject();
+                        if (obj == null || obj.get("messages") == null) {
+                            return;
+                        }
+                        JSONArray msgs = obj.get("messages").isArray();
+                        if (msgs == null) {
+                            return;
+                        }
+                        
+                        String lastCircuit = null;
+                        for (int i = 0; i < msgs.size(); i++) {
+                            JSONObject m = msgs.get(i).isObject();
+                            if (m == null) {
+                                continue;
+                            }
+                            String role = strField(m, "role");
+                            String text = strField(m, "text");
+                            if (text == null) {
+                                continue;
+                            }
+                            if ("user".equals(role)) {
+                                addMessageToChat("You", escapeHtml(text), false);
+                            } else {
+                                String html = formatMarkdown(text);
+                                String circuit = strField(m, "circuit");
+                                if (circuit != null) {
+                                    html += CIRCUIT_HINT;
+                                    lastCircuit = circuit;
+                                }
+                                addMessageToChat("AI Assistant", html, true);
+                            }
+                        }
+                        
+                        if (lastCircuit != null) {
+                            lastCircuitText = lastCircuit;
+                            importButton.setEnabled(true);
+                        }
+                    } catch (Exception e) {
+                        // History is a convenience; ignore anything malformed.
+                    }
+                }
+                
+                public void onError(Request request, Throwable exception) {
+                    // Server not reachable: just start with an empty chat.
+                }
+            });
+        } catch (RequestException e) {
+            // ignore
+        }
+    }
+    
+    private String strField(JSONObject o, String key) {
+        JSONValue v = o.get(key);
+        return (v != null && v.isString() != null) ? v.isString().stringValue() : null;
+    }
+    
     private void removeLastMessage() {
         int count = chatPanel.getWidgetCount();
         if (count > 0) {
@@ -410,7 +508,7 @@ public class AIChatbotDialog extends Dialog {
     private void clearChat() {
         chatPanel.clear();
         lastCircuitText = null;
-        sessionId = null;   // start a fresh agent conversation
+        setSessionId(null);   // start a fresh agent conversation
         importButton.setEnabled(false);
         addMessageToChat("AI Assistant", "Chat cleared. How can I help you?", true);
     }
