@@ -15,12 +15,16 @@ from query_preprocessor import preprocess_query
 import traceback
 import re
 import pandas as pd
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for browser access
 
 # Retrieve the Ollama API key from environment variable
 OLLAMA_API_KEY = os.environ.get("OLLAMA_API_KEY")
+
+print(f"Key loaded: {bool(OLLAMA_API_KEY)}, length: {len(OLLAMA_API_KEY or '')}")
 
 # Embeddings Path
 EMBEDDINGS_PATH = os.environ.get(
@@ -90,7 +94,7 @@ def health_check():
         "status": "ok",
         "embeddings_loaded": df is not None,
         "circuits_available": len(df) if df is not None else 0,
-        "llm_model": "mistral-large-3:675b-cloud"
+        "llm_model": "gpt-oss:120b-cloud"
     })
 
 
@@ -222,7 +226,7 @@ STRICT OUTPUT RULES:
         # Call Ollama API for circuit generation
         print("Calling Ollama for circuit generation...")
         chat_completion = ollama_client.chat(
-            model='mistral-large-3:675b-cloud',
+            model='gpt-oss:120b-cloud',
             messages=[
                 {
                     "role": "user",
@@ -301,7 +305,7 @@ def simple_query():
         print(f"Simple query: {incoming_query}")
 
         chat_completion = ollama_client.chat(
-            model='mistral-large-3:675b-cloud',
+            model='gpt-oss:120b-cloud',
             messages=[
                 {
                     "role": "system",

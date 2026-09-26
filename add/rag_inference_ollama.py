@@ -5,9 +5,13 @@ import numpy as np
 import os
 from ollama import Client
 from query_preprocessor import preprocess_query
+from dotenv import load_dotenv
+load_dotenv()
 
 # Retrieve the Ollama API key from environment variable
 OLLAMA_API_KEY = os.environ.get("OLLAMA_API_KEY")
+
+print(f"Key loaded: {bool(OLLAMA_API_KEY)}, length: {len(OLLAMA_API_KEY or '')}")
 
 # Initialize Ollama client
 client = Client(
@@ -116,7 +120,7 @@ try:
     print("GENERATED CIRCUIT:")
     print("="*70)
 
-    for part in client.chat('mistral-large-3:675b-cloud', messages=messages, stream=True):
+    for part in client.chat('gpt-oss:120b-cloud', messages=messages, stream=True):
         chunk = part.message.content
         print(chunk, end='', flush=True)
         response_parts.append(chunk)
