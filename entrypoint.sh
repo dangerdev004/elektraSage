@@ -5,4 +5,4 @@ echo "Starting CircuitJS..."
 ./dev.sh start &
 
 echo "Starting RAG server..."
-exec python add/rag_api_server.py
+exec python add/app.py

@@ -1,0 +1,36 @@
+{
+  "session_id": "8377eb2dd4df4788bf2f9066bff23d77",
+  "updated": "2026-09-26 04:49:26",
+  "messages": [
+    {
+      "role": "user",
+      "text": "Can you make me a not gate",
+      "time": "2026-09-26 04:45:39"
+    },
+    {
+      "role": "assistant",
+      "text": "I’m sorry, but generating a NOT gate isn’t supported by the available circuit‑generation tools.",
+      "time": "2026-09-26 04:45:39"
+    },
+    {
+      "role": "user",
+      "text": "Can I get a NOR gate",
+      "time": "2026-09-26 04:48:09"
+    },
+    {
+      "role": "assistant",
+      "text": "I’m sorry, but creating a NOR gate isn’t supported by the available circuit‑generation tools.",
+      "time": "2026-09-26 04:48:09"
+    },
+    {
+      "role": "user",
+      "text": "Can I get a AND gate",
+      "time": "2026-09-26 04:49:26"
+    },
+    {
+      "role": "assistant",
+      "text": "I’m sorry, but generating an AND gate isn’t supported by the available circuit‑generation tools.",
+      "time": "2026-09-26 04:49:26"
+    }
+  ]
+}
