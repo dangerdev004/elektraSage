@@ -67,9 +67,23 @@ def execute_tool_call(name: str, arguments: dict, generated: list) -> str:
         return f"Error: no tool named '{name}' is available."
 
     try:
-        netlist = available_functions[name](**arguments)
+        result = available_functions[name](**arguments)
     except (ValueError, TypeError) as e:
         return f"Error calling {name} with {arguments}: {e}"
+
+    if isinstance(result, str):
+        netlist = result
+    elif isinstance(result, tuple):
+        # Some circuit functions accidentally return (netlist, extra_stuff)
+        # instead of just the netlist string. Recover the string part rather
+        # than crashing the whole turn, but flag it so it gets fixed.
+        netlist = next((p for p in result if isinstance(p, str)), None)
+        if netlist is None:
+            return f"Error: {name} returned a tuple with no string in it: {result!r}"
+        print(f"Warning: {name} returned a {len(result)}-tuple, not a plain string; "
+              f"using the string element. Fix its return statement.")
+    else:
+        return f"Error: {name} returned {type(result).__name__}, expected a netlist string"
 
     path = save_netlist(name, netlist)
     line_count = netlist.count("\n") + 1

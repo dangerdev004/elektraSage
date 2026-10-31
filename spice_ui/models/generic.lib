@@ -1,0 +1,12 @@
+* Generic example models shipped with circuit-ui. These are simple textbook-style parameter sets
+* written for this project, NOT manufacturer models of any real part. Add your own .lib / .mod files
+* to this folder (for example a vendor model for the exact diode or transistor you use).
+
+.model GEN_SIGNAL_DIODE D(IS=2n RS=0.6 N=1.7 CJO=4p TT=10n BV=75 IBV=10u)
+.model GEN_POWER_DIODE  D(IS=10n RS=0.05 N=1.9 CJO=50p TT=2u BV=400 IBV=10u)
+.model GEN_SCHOTTKY     D(IS=5u RS=0.1 N=1.05 CJO=30p BV=40 IBV=100u)
+.model GEN_RED_LED      D(IS=1e-18 N=1.9 RS=2)
+.model GEN_NPN_SMALL    NPN(IS=1e-14 BF=200 VAF=100 CJE=8p CJC=4p TF=0.4n)
+.model GEN_PNP_SMALL    PNP(IS=1e-14 BF=150 VAF=80 CJE=8p CJC=4p TF=0.5n)
+.model GEN_NMOS_LOGIC   NMOS(LEVEL=1 VTO=1.5 KP=0.1 LAMBDA=0.02)
+.model GEN_PMOS_LOGIC   PMOS(LEVEL=1 VTO=-1.5 KP=0.05 LAMBDA=0.02)
