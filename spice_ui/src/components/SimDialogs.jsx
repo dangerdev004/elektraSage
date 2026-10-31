@@ -88,7 +88,25 @@ export function NetlistDialog({ netlist, onClose }) {
   );
 }
 
-export function ModelLibraryDialog({ library, loading, onRefresh, onClose }) {
+export function ModelLibraryDialog({ library, loading, onRefresh, onUpload, onClose }) {
+  const [note, setNote] = useState(null); // { ok, message }
+  const [pending, setPending] = useState(null); // a file the server already has: { name, content }
+  const picker = useRef(null);
+  const send = async (name, content, overwrite) => {
+    setNote({ ok: true, message: `Uploading ${name}…` });
+    const r = await onUpload(name, content, overwrite);
+    if (r.exists) { setPending({ name, content }); setNote({ ok: false, message: r.message }); return; }
+    setPending(null);
+    setNote(r);
+  };
+  const pick = async (ev) => {
+    const files = [...(ev.target.files ?? [])];
+    ev.target.value = '';
+    for (const f of files) {
+      if (f.size > 5 * 1024 * 1024) { setNote({ ok: false, message: `${f.name} is larger than 5 MB.` }); continue; }
+      await send(f.name, await f.text(), false);
+    }
+  };
   const models = (library?.models ?? []).filter((m) => m.kind === 'model');
   const subckts = (library?.models ?? []).filter((m) => m.kind === 'subckt');
   return (
@@ -99,7 +117,7 @@ export function ModelLibraryDialog({ library, loading, onRefresh, onClose }) {
         {library?.dir && <p className="hint">Folder (on the machine running the server): {library.dir}</p>}
         <p>
           {models.length} model{models.length === 1 ? '' : 's'} in {library?.files?.length ?? 0} file{library?.files?.length === 1 ? '' : 's'}
-          {subckts.length ? `, plus ${subckts.length} subcircuit${subckts.length === 1 ? '' : 's'} (listed, but not assignable to parts yet)` : ''}.
+          {subckts.length ? `, plus ${subckts.length} subcircuit${subckts.length === 1 ? '' : 's'} (place them with Draw > Outputs and Labels > Subcircuit)` : ''}.
         </p>
         <pre className="netlist">
           {[...models, ...subckts].map((m) => `${m.name.padEnd(24)} ${m.type.padEnd(8)} ${m.file}`).join('\n') || '(empty)'}
@@ -107,8 +125,20 @@ export function ModelLibraryDialog({ library, loading, onRefresh, onClose }) {
         {(library?.problems ?? []).length > 0 && (
           <ul className="form-errors">{library.problems.map((p) => <li key={p}>{p}</li>)}</ul>
         )}
-        <p className="hint">Add files to the folder above, then press Refresh. Then pick a model in a part's Edit dialog.</p>
+        <p className="hint">
+          Upload a model file here, or copy it into the folder above and press Refresh. Then pick a model in a part's Edit dialog.
+          Files may not run scripts, include other files by path, or read data files.
+        </p>
+        {note && <p className={note.ok ? 'hint' : 'form-errors'}>{note.message}</p>}
+        {pending && (
+          <div className="modal-buttons">
+            <button type="button" onClick={() => send(pending.name, pending.content, true)}>Replace {pending.name}</button>
+            <button type="button" onClick={() => { setPending(null); setNote(null); }}>Keep the old one</button>
+          </div>
+        )}
+        <input ref={picker} type="file" multiple hidden accept=".lib,.mod,.model,.cir,.sp,.spi,.inc,.txt" onChange={pick} />
         <div className="modal-buttons">
+          <button type="button" onClick={() => picker.current?.click()}>Upload…</button>
           <button type="button" onClick={onRefresh} disabled={loading}>{loading ? 'Loading…' : 'Refresh'}</button>
           <button type="button" onClick={onClose}>Close</button>
         </div>

@@ -63,13 +63,13 @@ test('rect helpers', () => {
   assert.ok(!rectsIntersect(a, { x0: 11, y0: 0, x1: 20, y1: 5 }));
 });
 
-test('catalog matches CirSim.composeMainMenu (plus XNOR, Buffer and SR Latch added by this app): group titles, counts, unique ids', () => {
+test('catalog matches CirSim.composeMainMenu (plus XNOR, Buffer, SR Latch and SPICE Directive added by this app): group titles, counts, unique ids', () => {
   assert.deepEqual(GROUPS.map((g) => g.title), [
     'Passive Components', 'Inputs and Sources', 'Outputs and Labels', 'Active Components',
     'Active Building Blocks', 'Logic Gates, Input and Output', 'Digital Chips',
     'Analog and Hybrid Chips',
   ]);
-  assert.deepEqual(GROUPS.map((g) => g.items.length), [23, 17, 19, 17, 23, 10, 19, 6]);
+  assert.deepEqual(GROUPS.map((g) => g.items.length), [23, 17, 22, 17, 23, 10, 19, 6]);
   const ids = [...TOP_PARTS, ...GROUPS.flatMap((g) => g.items)].map((p) => p[0]);
   assert.equal(new Set(ids).size, ids.length);
   assert.equal(Object.keys(LABELS).length, ids.length);

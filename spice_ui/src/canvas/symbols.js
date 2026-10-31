@@ -4,7 +4,8 @@
 // standard schematic shapes; nothing here is copied from CircuitJS1.
 
 import { elLength, fromLocal } from './geometry.js';
-import { getDef } from './parts.js';
+import { directiveBox } from './directive.js';
+import { getDef, halfHOf, subcktRows } from './parts.js';
 
 const line = (ctx, x1, y1, x2, y2) => {
   ctx.moveTo(x1, y1);
@@ -232,6 +233,22 @@ const DRAW = {
     ctx.lineTo(L + 16, -3);
   },
 
+  logicin(ctx, L) {
+    line(ctx, 0, 0, L, 0);
+    ctx.rect(L, -11, 24, 22);
+  },
+
+  // lamp: filled when the net is HIGH in the last result (o.lamp === true)
+  logicout(ctx, L, o) {
+    line(ctx, 0, 0, L, 0);
+    ctx.moveTo(L + 22, 0);
+    ctx.arc(L + 11, 0, 11, 0, Math.PI * 2);
+    if (o.lamp === true) {
+      ctx.fillStyle = '#ffd54f';
+      ctx.fill();
+    }
+  },
+
   // Logic gates (distinctive-shape symbols). Body spans x = 16..52; inputs at (0, +-16), output at L.
   gate(ctx, L, o, def) {
     const tip = def.shape === 'buf' ? 48 : 52;
@@ -293,6 +310,28 @@ const DRAW = {
     }
   },
 
+  subckt(ctx, L, o, def, el) {
+    const pins = el?.pins ?? [];
+    const half = subcktRows(el) * 16;
+    const left = Math.ceil(pins.length / 2);
+    ctx.rect(16, -half, L - 32, half * 2);
+    pins.forEach((_, i) => {
+      if (i < left) line(ctx, 0, -half + 16 + 32 * i, 16, -half + 16 + 32 * i);
+      else line(ctx, L - 16, -half + 16 + 32 * (i - left), L, -half + 16 + 32 * (i - left));
+    });
+  },
+
+  label(ctx, L, o, def) {
+    line(ctx, 0, 0, L, 0);
+    if (def.port) { ctx.rect(L, -10, 60, 20); return; } // ports are plain rectangles, labels are flags
+    ctx.moveTo(L, 0);
+    ctx.lineTo(L + 8, -10);
+    ctx.lineTo(L + 60, -10);
+    ctx.lineTo(L + 60, 10);
+    ctx.lineTo(L + 8, 10);
+    ctx.closePath();
+  },
+
   box(ctx, L, o, def) {
     const m = L / 2;
     const w = 20;
@@ -312,9 +351,36 @@ export function drawElement(ctx, el, opts = {}) {
   ctx.rotate(Math.atan2(el.y2 - el.y1, el.x2 - el.x1));
   if (el.mirror) ctx.scale(1, -1);
   ctx.beginPath();
-  fn(ctx, L, { ...opts, swap: String(el.params?.swap) === 'true', open: String(el.params?.open) === 'true' }, def);
+  fn(ctx, L, { ...opts, swap: String(el.params?.swap) === 'true', open: String(el.params?.open) === 'true' }, def, el);
   ctx.stroke();
   ctx.restore();
+  if (def.kind === 'directive') {
+    // a framed block of monospace text, always upright
+    const b = directiveBox(el);
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.rect(b.x, b.y, b.w, b.h);
+    ctx.stroke();
+    ctx.font = '11px ui-monospace, Menlo, Consolas, monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    b.lines.forEach((l, i) => ctx.fillText(l, b.x + b.pad, b.y + b.pad + b.lineH / 2 + i * b.lineH));
+    ctx.restore();
+  }
+  if (def.kind === 'logicin' || def.kind === 'logicout') {
+    ctx.save();
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const c = fromLocal(el, L + (def.kind === 'logicin' ? 12 : 11), 0);
+    let txt;
+    if (def.kind === 'logicin') txt = String(el.params?.high) === 'true' ? '1' : '0';
+    else txt = opts.lamp === true ? '1' : opts.lamp === false ? '0' : '?';
+    if (def.kind === 'logicout' && opts.lamp === true) ctx.fillStyle = '#000000'; // dark digit on the lit lamp
+    ctx.fillText(txt, c.x, c.y);
+    ctx.restore();
+  }
   if (def.kind === 'chip') {
     // pin names and the part title in world space so they are never rotated or mirrored
     ctx.save();
@@ -331,6 +397,31 @@ export function drawElement(ctx, el, opts = {}) {
     ctx.font = '8px sans-serif';
     const c = at(L / 2, 0);
     ctx.fillText(def.title, c.x, c.y, L - 36);
+    ctx.restore();
+  }
+  if (def.kind === 'label') {
+    ctx.save();
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const c = fromLocal(el, L + 34, 0);
+    ctx.fillText(String(el.value ?? '').trim() || '?', c.x, c.y, 48);
+    ctx.restore();
+  }
+  if (def.kind === 'subckt') {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const pins = el.pins ?? [];
+    const left = Math.ceil(pins.length / 2);
+    const half = subcktRows(el) * 16;
+    const at = (lx, ly) => fromLocal(el, lx, ly);
+    ctx.font = '9px sans-serif';
+    pins.forEach((n, i) => {
+      const q = i < left ? at(36, -half + 16 + 32 * i) : at(L - 36, -half + 16 + 32 * (i - left));
+      ctx.fillText(n, q.x, q.y, 36);
+    });
+    if (!pins.length) { const c = at(L / 2, 0); ctx.fillText('SUBCKT ?', c.x, c.y, L - 36); }
     ctx.restore();
   }
   if (def.kind === 'box') {
@@ -355,10 +446,10 @@ export function drawLabel(ctx, el, text) {
   ctx.textBaseline = 'middle';
   if (horizontal) {
     ctx.textAlign = 'center';
-    ctx.fillText(text, mx, my - (getDef(el.type).halfH + 6));
+    ctx.fillText(text, mx, my - (halfHOf(el) + 6));
   } else {
     ctx.textAlign = 'left';
-    ctx.fillText(text, mx + getDef(el.type).halfH + 6, my);
+    ctx.fillText(text, mx + halfHOf(el) + 6, my);
   }
   ctx.restore();
 }

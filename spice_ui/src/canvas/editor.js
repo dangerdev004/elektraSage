@@ -5,9 +5,11 @@
 import {
   GRID, snap, segDist, elLength, toLocal, fromLocal, axisEnd, rectsIntersect, normRect,
 } from './geometry.js';
-import { getDef } from './parts.js';
+import { getDef, halfHOf } from './parts.js';
 import { drawElement, drawLabel } from './symbols.js';
+import { directiveBox } from './directive.js';
 import { KEY_TO_PART } from '../data/shortcuts.js';
+import { PART_PARAMS, stepText, withUnit } from '../sim/params.js';
 
 const COLORS = {
   dark: { bg: '#000', dots: '#4a4a4a', base: '#a0a0a0', text: '#d8d8d8' },
@@ -47,7 +49,8 @@ export class Editor {
     this.onChange = null; // (state) => void
     this.onContextMenu = null; // ({x, y, onElement}) => void
     this.onEdit = null; // (element) => void   (double click)
-    this.onToggle = null; // (element) => void  (a switch was clicked)
+    this.onToggle = null; // (element) => void  (a switch or logic input was clicked)
+    this.lampProvider = null; // (element) => true | false | null   state of a Logic Output's net
     this.onNotice = null; // (text) => void
     this.rev = 0; // bumped on every change to the circuit
     this.nodeLabelProvider = null; // () => [{x, y, text}] supplied by the app (SPICE node names)
@@ -158,15 +161,19 @@ export class Editor {
 
   terminals(el) {
     const def = getDef(el.type);
-    return def.terminals(elLength(el)).map((t) => fromLocal(el, t.x, t.y));
+    return def.terminals(elLength(el), el).map((t) => fromLocal(el, t.x, t.y));
   }
 
   bbox(el) {
     const def = getDef(el.type);
+    if (def.kind === 'directive') {
+      const b = directiveBox(el);
+      return { x0: b.x, y0: b.y, x1: b.x + b.w, y1: b.y + b.h };
+    }
     const L = elLength(el);
     const pts = [
-      fromLocal(el, -2, -def.halfH), fromLocal(el, L + def.ext, -def.halfH),
-      fromLocal(el, -2, def.halfH), fromLocal(el, L + def.ext, def.halfH),
+      fromLocal(el, -2, -halfHOf(el)), fromLocal(el, L + def.ext, -halfHOf(el)),
+      fromLocal(el, -2, halfHOf(el)), fromLocal(el, L + def.ext, halfHOf(el)),
     ];
     return {
       x0: Math.min(...pts.map((p) => p.x)), y0: Math.min(...pts.map((p) => p.y)),
@@ -198,9 +205,14 @@ export class Editor {
         if (segDist(wx, wy, el.x1, el.y1, el.x2, el.y2) <= tol) return el;
         continue;
       }
+      if (def.kind === 'directive') {
+        const b = directiveBox(el);
+        if (wx >= b.x - tol && wx <= b.x + b.w + tol && wy >= b.y - tol && wy <= b.y + b.h + tol) return el;
+        continue;
+      }
       const l = toLocal(el, wx, wy);
       const L = elLength(el);
-      if (l.x >= -tol && l.x <= L + def.ext + tol && Math.abs(l.y) <= def.halfH + tol) return el;
+      if (l.x >= -tol && l.x <= L + def.ext + tol && Math.abs(l.y) <= halfHOf(el) + tol) return el;
     }
     return null;
   }
@@ -355,6 +367,7 @@ export class Editor {
     if (!el) return;
     this.pushUndo();
     if (patch.value !== undefined) el.value = patch.value;
+    if (patch.pins !== undefined) { if (patch.pins?.length) el.pins = [...patch.pins]; else delete el.pins; }
     if (patch.model !== undefined) { if (patch.model) el.model = patch.model; else delete el.model; }
     if (patch.params !== undefined) { if (Object.keys(patch.params).length) el.params = { ...patch.params }; else delete el.params; }
     this.redraw(); this.emit();
@@ -365,10 +378,11 @@ export class Editor {
   toDocument(title = '') {
     return {
       format: 'circuit-ui', version: 1, title,
-      elements: this.els.map(({ type, x1, y1, x2, y2, mirror, value, model, params }) => {
+      elements: this.els.map(({ type, x1, y1, x2, y2, mirror, value, model, params, pins }) => {
         const o = { type, x1, y1, x2, y2, mirror: !!mirror };
         if (value !== undefined) o.value = value;
         if (model) o.model = model;
+        if (pins && pins.length) o.pins = [...pins];
         if (params && Object.keys(params).length) o.params = { ...params };
         return o;
       }),
@@ -386,6 +400,7 @@ export class Editor {
       if (!ok) throw new Error(`Element ${i + 1} is malformed (needs type, x1, y1, x2, y2 as numbers).`);
       const el = this.newElement(o.type, o.x1, o.y1, o.x2, o.y2, typeof o.value === 'string' ? o.value : undefined, !!o.mirror);
       if (typeof o.model === 'string' && o.model) el.model = o.model;
+      if (o.type === 'SubcktElm' && Array.isArray(o.pins) && o.pins.length <= 64 && o.pins.every((p) => typeof p === 'string' && /^[\w.+\-#$%@!]{1,40}$/.test(p))) el.pins = [...o.pins];
       if (o.params && typeof o.params === 'object' && !Array.isArray(o.params)) {
         const params = {};
         for (const [k, v] of Object.entries(o.params)) if (typeof v === 'string' || typeof v === 'boolean') params[k] = String(v);
@@ -647,7 +662,7 @@ export class Editor {
   pointerUp(e) {
     const d = this.drag;
     this.drag = null;
-    this.canvas.releasePointerCapture?.(e.pointerId);
+    this.canvas?.releasePointerCapture?.(e.pointerId);
     if (!d) return;
     if (d.type === 'pan') {
       this.canvas.style.cursor = this.mode === 'dragAll' ? 'grab' : this.mode === 'select' ? 'default' : 'crosshair';
@@ -662,6 +677,10 @@ export class Editor {
       if (el && (el.type === 'SwitchElm' || el.type === 'PushSwitchElm')) {
         this.pushUndo();
         el.params = { ...el.params, open: String(el.params?.open) === 'true' ? 'false' : 'true' };
+        this.onToggle?.(el);
+      } else if (el && el.type === 'LogicInputElm') {
+        this.pushUndo();
+        el.params = { ...el.params, high: String(el.params?.high) === 'true' ? 'false' : 'true' };
         this.onToggle?.(el);
       }
     }
@@ -680,7 +699,32 @@ export class Editor {
   wheel(e) {
     e.preventDefault();
     const p = this.pos(e);
+    if (this.opts.wheelEdit && !this.opts.noEdit && this.wheelEditValue(e, p)) return;
     this.zoomAt(p.x, p.y, Math.exp(-e.deltaY * 0.0015));
+  }
+
+  /**
+   * "Edit Values With Mouse Wheel": with the option on, scrolling over a part steps its main value
+   * (resistance, capacitance, voltage, ...) up or down in 1-2-5 steps instead of zooming.
+   * Returns true when it handled the wheel event.
+   */
+  wheelEditValue(e, p) {
+    const w = this.toWorld(p.x, p.y);
+    const el = this.hitTest(w.x, w.y);
+    const spec = el && PART_PARAMS[el.type];
+    if (!spec?.valueLabel) return false; // not over a part with a single main value: zoom as usual
+    const unit = spec.valueUnit === 'Ω' ? '' : spec.valueUnit ?? '';
+    const next = withUnit(stepText(el.value ?? getDef(el.type).value, e.deltaY < 0 ? 1 : -1, spec.valueDef ?? '1', unit), spec.valueUnit);
+    if (next === el.value) return true;
+    // one undo step per burst of scrolling on the same part
+    const now = Date.now();
+    if (this._wheelId !== el.id || now - (this._wheelAt ?? 0) > 700) this.pushUndo();
+    this._wheelId = el.id;
+    this._wheelAt = now;
+    el.value = next;
+    this.redraw(); this.emit();
+    this.onValueChange?.(el);
+    return true;
   }
 
   dblClick(e) {
@@ -708,6 +752,7 @@ export class Editor {
     if (ctrl && k === 'Enter') this.onShortcut?.('sim.run');
     else if (ctrl && k.toLowerCase() === 's') this.onShortcut?.('file.exportaslocalfile');
     else if (ctrl && k.toLowerCase() === 'o') this.onShortcut?.('file.importfromlocalfile');
+    else if (ctrl && k.toLowerCase() === 'p') this.onShortcut?.('file.print');
     else if (ctrl && k.toLowerCase() === 'z') this.exec(e.shiftKey ? 'edit.redo' : 'edit.undo');
     else if (ctrl && k.toLowerCase() === 'y') this.exec('edit.redo');
     else if (ctrl && k.toLowerCase() === 'x') this.exec('edit.cut');
@@ -772,8 +817,8 @@ export class Editor {
     const paint = (el, color) => {
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
-      drawElement(ctx, el, o);
-      if (this.opts.showValues) {
+      drawElement(ctx, el, el.type === 'LogicOutputElm' ? { ...o, lamp: this.lampProvider?.(el) ?? null } : o);
+      if (this.opts.showValues && getDef(el.type).kind !== 'directive' && getDef(el.type).kind !== 'label') {
         const def = getDef(el.type);
         drawLabel(ctx, el, el.model ?? el.value ?? def.value);
       }

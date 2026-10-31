@@ -20,6 +20,18 @@ const chip = (title, pinSpec) => ({
 const SETRST = [{ n: 'SET', x: 48, y: -48, side: 't' }, { n: 'RST', x: 48, y: 48, side: 'b' }];
 const QQ = [{ n: 'Q', x: 'L', y: -16, side: 'r' }, { n: 'Q̅', x: 'L', y: 16, side: 'r' }];
 
+// Subcircuit block: pins come from the chosen .subckt (el.pins), first half down the left side, rest down the right.
+export const subcktRows = (el) => { const n = el?.pins?.length ?? 0; return Math.max(1, Math.ceil(n / 2)); };
+export const subcktSides = (el) => { const n = el?.pins?.length ?? 0; const left = Math.ceil(n / 2); return { left, right: n - left }; };
+const subcktTerminals = (L, el) => {
+  const pins = el?.pins ?? [];
+  const { left } = subcktSides(el);
+  const half = subcktRows(el) * 16;
+  return pins.map((_, i) => (i < left
+    ? { x: 0, y: -half + 16 + 32 * i }
+    : { x: L, y: -half + 16 + 32 * (i - left) }));
+};
+
 const R = { minLen: 32, terminals: two, halfH: 12, ext: 0 };
 
 export const DEFS = {
@@ -30,6 +42,8 @@ export const DEFS = {
   InductorElm: { ...R, kind: 'inductor', value: '1 H', label: 'Inductor' },
   SwitchElm: { ...R, kind: 'switch', label: 'Switch' },
   PushSwitchElm: { ...R, kind: 'switch', label: 'Push Switch' },
+  LabeledNodeElm: { kind: 'label', minLen: 16, terminals: one, halfH: 12, ext: 60, value: '', label: 'Labeled Node' },
+  PortElm: { kind: 'label', port: true, minLen: 16, terminals: one, halfH: 12, ext: 60, value: '', label: 'Subcircuit Port' },
   GroundElm: { kind: 'ground', minLen: 16, terminals: one, halfH: 12, ext: 12, label: 'Ground' },
   DCVoltageElm: { ...R, kind: 'dcvolt', value: '5 V', halfH: 14, label: 'Voltage Source' },
   ACVoltageElm: { ...R, kind: 'acvolt', value: '5 V, 40 Hz', halfH: 16, label: 'A/C Voltage Source' },
@@ -43,6 +57,9 @@ export const DEFS = {
   PTransistorElm: { kind: 'pnp', minLen: 32, terminals: bjt, halfH: 20, ext: 0, label: 'PNP Transistor' },
   NMosfetElm: { kind: 'nmos', minLen: 32, terminals: bjt, halfH: 20, ext: 0, label: 'N-MOSFET' },
   PMosfetElm: { kind: 'pmos', minLen: 32, terminals: bjt, halfH: 20, ext: 0, label: 'P-MOSFET' },
+  DirectiveElm: { kind: 'directive', minLen: 48, terminals: () => [], halfH: 14, ext: 0, value: '* SPICE directive (double-click to edit)', label: 'SPICE Directive' },
+  LogicInputElm: { kind: 'logicin', minLen: 16, terminals: one, halfH: 14, ext: 24, label: 'Logic Input' },
+  LogicOutputElm: { kind: 'logicout', minLen: 16, terminals: one, halfH: 14, ext: 24, label: 'Logic Output' },
   ClockElm: { kind: 'clock', minLen: 16, terminals: one, halfH: 12, ext: 22, value: '5 V, 1 kHz', label: 'Clock' },
   AndGateElm: { kind: 'gate', shape: 'and', minLen: 64, terminals: gate2, halfH: 24, ext: 0, label: 'AND Gate' },
   NandGateElm: { kind: 'gate', shape: 'and', bubble: true, minLen: 64, terminals: gate2, halfH: 24, ext: 0, label: 'NAND Gate' },
@@ -57,12 +74,16 @@ export const DEFS = {
   TFlipFlopElm: { ...chip('T FF', [{ n: 'T', x: 0, y: -16, side: 'l' }, { n: '', x: 0, y: 16, side: 'l', clk: true }, ...SETRST, ...QQ]), label: 'T Flip-Flop' },
   LatchElm: { ...chip('D LATCH', [{ n: 'D', x: 0, y: -16, side: 'l' }, { n: 'EN', x: 0, y: 16, side: 'l' }, ...SETRST, ...QQ]), label: 'Latch' },
   SRLatchElm: { ...chip('SR LATCH', [{ n: 'S', x: 0, y: -16, side: 'l' }, { n: 'R', x: 0, y: 16, side: 'l' }, ...QQ]), label: 'SR Latch' },
+  SubcktElm: { kind: 'subckt', minLen: 128, terminals: subcktTerminals, halfH: 32, ext: 0, label: 'Subcircuit' },
   OpAmpElm: { kind: 'opamp', minLen: 64, terminals: opamp, halfH: 34, ext: 0, label: 'Op Amp (ideal)' },
 };
 
 // "Op Amp (ideal, + on top)" is the same symbol with the inputs swapped, i.e. mirrored.
 DEFS.OpAmpSwapElm = { ...DEFS.OpAmpElm, label: 'Op Amp (+ on top)', swap: true };
 DEFS.OpAmpRealElm = { ...DEFS.OpAmpElm, label: 'Op Amp (real)' };
+
+/** Half the symbol height of this element (subcircuits grow with their pin count). */
+export const halfHOf = (el) => (el.type === 'SubcktElm' ? subcktRows(el) * 16 + 8 : getDef(el.type).halfH);
 
 export function getDef(type) {
   const d = DEFS[type];

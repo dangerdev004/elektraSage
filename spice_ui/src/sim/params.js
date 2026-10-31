@@ -120,6 +120,16 @@ const BASIC = {
     compose: sourceLabel,
     note: 'Square wave from 0 V to the high level.',
   },
+  LogicInputElm: {
+    title: 'Logic Input',
+    fields: [f('high', 'Output HIGH', '', { kind: 'check' }), f('vhigh', 'Logic high level (V)', 'V', { def: '5' })],
+    note: 'Click the part on the canvas to toggle 0 / 1. Drives its net with 0 V or the logic high level (empty = 5 V).',
+  },
+  LogicOutputElm: {
+    title: 'Logic Output',
+    fields: [f('vhigh', 'Logic high level (V)', 'V', { def: '5' })],
+    note: 'Lit and shown as 1 when the net is above half the logic high level in the last result; "?" when there is no current result.',
+  },
   SwitchElm: { title: 'Switch', fields: [f('open', 'Open', '', { kind: 'check' })], note: 'Closed = 1 mΩ, open = 1 GΩ. Click the switch on the canvas to toggle it.' },
   PushSwitchElm: { title: 'Push Switch', fields: [f('open', 'Open', '', { kind: 'check' })], note: 'No momentary action in a batch run: this is a switch with a fixed state. Click it to toggle.' },
 };

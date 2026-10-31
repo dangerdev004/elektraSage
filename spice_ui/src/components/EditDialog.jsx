@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getDef } from '../canvas/parts.js';
 import { PART_PARAMS, OPAMP_PRESETS, opampParam, stepText, withUnit } from '../sim/params.js';
+import { checkDirectives, ALLOWED_DIRECTIVES } from '../sim/directives.js';
 
 // Minimal "Edit..." dialog: one free-text value per part (shown next to the symbol).
 // CircuitJS1's real dialogs have one field per parameter; that comes with the simulator.
@@ -171,6 +172,119 @@ export function ParamDialog({ element, library, onApply, onOk, onCancel }) {
           <button type="button" onClick={onCancel}>Cancel</button>
         </div>
       </form>
+    </div>
+  );
+}
+
+/** Multi-line text box for a SPICE Directive part, with the same check the netlist builder applies. */
+export function DirectiveDialog({ element, onApply, onOk, onCancel }) {
+  const [text, setText] = useState(element.value ?? '');
+  const ref = useRef(null);
+  useEffect(() => { ref.current?.focus(); }, []);
+  const { problems } = checkDirectives(text);
+  return (
+    <div className="modal-backdrop" onPointerDown={onCancel}>
+      <form className="modal params" onPointerDown={(e) => e.stopPropagation()} onSubmit={(ev) => { ev.preventDefault(); onOk(text); }}>
+        <h3>Edit SPICE Directive</h3>
+        <textarea
+          ref={ref}
+          className="directive-text"
+          rows={8}
+          spellCheck={false}
+          value={text}
+          onChange={(ev) => setText(ev.target.value)}
+          placeholder={'.param vcc=5\n.model DMYLED D(IS=1e-18 N=1.9)\n.options reltol=1e-4'}
+        />
+        <p className="hint">
+          Allowed: {ALLOWED_DIRECTIVES.map((c) => `.${c}`).join(' ')}. Start a line with + to continue the previous one;
+          * starts a comment. The analysis comes from Simulation &gt; Analysis Setup, and model files from the Model Library.
+        </p>
+        {problems.length > 0 && <ul className="problems">{problems.map((p) => <li key={p}>{p}</li>)}</ul>}
+        <div className="modal-buttons spread">
+          <button type="button" onClick={() => onApply(text)}>Apply</button>
+          <button type="submit">OK</button>
+          <button type="button" onClick={onCancel}>Cancel</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/** Pick a .subckt from the model library for a Subcircuit block; its pins become the block's pins. */
+export function SubcktDialog({ element, library, onApply, onOk, onCancel }) {
+  const subs = (library?.models ?? []).filter((m) => m.kind === 'subckt');
+  const [name, setName] = useState(element.model ?? '');
+  const [params, setParams] = useState({ ...(element.params ?? {}) });
+  const entry = subs.find((m) => m.name === name);
+  const missing = name && !entry;
+  const pick = (n) => { setName(n); setParams({}); };
+  const result = () => {
+    const p = {};
+    for (const pd of entry?.params ?? []) if (String(params[pd.name] ?? '').trim() !== '') p[pd.name] = params[pd.name];
+    return { model: entry ? entry.name : name, pins: entry ? entry.pins : element.pins ?? [], params: p };
+  };
+  return (
+    <div className="modal-backdrop" onPointerDown={onCancel}>
+      <form className="modal params" onPointerDown={(e) => e.stopPropagation()} onSubmit={(ev) => { ev.preventDefault(); onOk(result()); }}>
+        <h3>Edit Subcircuit</h3>
+        <label className="row">Subcircuit
+          <select value={name} onChange={(ev) => pick(ev.target.value)}>
+            <option value="">(choose)</option>
+            {missing && <option value={name}>{name} (not in library)</option>}
+            {subs.map((m) => <option key={`${m.file}:${m.name}`} value={m.name}>{m.name} - {m.file}</option>)}
+          </select>
+        </label>
+        {entry && <p className="hint">Pins, in SPICE order: {entry.pins.join(', ') || '(none)'}. Down the left side first, then the right.</p>}
+        {entry && (entry.params ?? []).map((pd) => (
+          <label className="row" key={pd.name}>{pd.name}
+            <input value={params[pd.name] ?? ''} placeholder={`default ${pd.def}`} onChange={(ev) => setParams({ ...params, [pd.name]: ev.target.value })} />
+          </label>
+        ))}
+        {!subs.length && <p className="hint">{library?.error ?? 'No subcircuits in the library yet. Add a .lib file with the Upload button in Simulation > Model Library.'}</p>}
+        <div className="modal-buttons spread">
+          <button type="button" onClick={() => onApply(result())}>Apply</button>
+          <button type="submit">OK</button>
+          <button type="button" onClick={onCancel}>Cancel</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/** Turn the circuit on the canvas into a .subckt file in the model library. */
+export function PackDialog({ initialName, build, onSave, onClose }) {
+  const [name, setName] = useState(initialName);
+  const [msg, setMsg] = useState('');
+  const [pending, setPending] = useState(false);
+  const r = build(name);
+  const save = async (overwrite) => {
+    const res = await onSave(`${name}.lib`, r.text, overwrite);
+    if (res.exists) { setPending(true); setMsg(res.message); return; }
+    setPending(false);
+    setMsg(res.message);
+    if (res.ok) setTimeout(onClose, 900);
+  };
+  return (
+    <div className="modal-backdrop" onPointerDown={onClose}>
+      <div className="modal params" onPointerDown={(e) => e.stopPropagation()}>
+        <h3>Pack As Subcircuit</h3>
+        <label className="row">Name
+          <input value={name} onChange={(ev) => { setName(ev.target.value); setPending(false); setMsg(''); }} autoFocus />
+        </label>
+        <p className="hint">
+          Saved as {name || '...'}.lib in the model library. Pins are the Subcircuit Ports, top to bottom then left to right
+          {r.ports?.length ? `: ${r.ports.join(', ')}` : ''}. Place it with Draw &gt; Outputs and Labels &gt; Subcircuit.
+        </p>
+        {r.errors.length > 0 && <ul className="problems">{r.errors.map((e) => <li key={e}>{e}</li>)}</ul>}
+        {r.ok && <pre className="netlist">{r.text}</pre>}
+        {msg && <p className="hint">{msg}</p>}
+        <div className="modal-buttons spread">
+          {pending
+            ? <button type="button" onClick={() => save(true)}>Replace {name}.lib</button>
+            : <button type="button" disabled={!r.ok} onClick={() => save(false)}>Save to library</button>}
+          <button type="button" onClick={onClose}>Close</button>
+        </div>
+      </div>
     </div>
   );
 }

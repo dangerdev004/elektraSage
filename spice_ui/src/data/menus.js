@@ -22,9 +22,7 @@ export const OPTION_ITEMS = [
   ['toolbar', 'Toolbar'],
   ['crosshair', 'Show Cursor Cross Hairs'],
   ['euro', 'European Resistors'],
-  ['iec', 'IEC Gates'],
   ['white', 'White Background'],
-  ['conventional', 'Conventional Current Motion'],
   ['noEdit', 'Disable Editing'],
   ['wheelEdit', 'Edit Values With Mouse Wheel'],
 ];
@@ -49,7 +47,7 @@ export const DEFAULT_UI_OPTIONS = {
 // Options that actually change the picture or the editor in this prototype.
 export const WORKING_OPTIONS = new Set([
   'showVoltage', 'showPower', 'showValues', 'nodeLabels', 'smallGrid', 'toolbar', 'crosshair', 'euro', 'white',
-  'noEdit',
+  'noEdit','wheelEdit',
 ]);
 
 export function buildMenus() {
@@ -57,18 +55,15 @@ export function buildMenus() {
     { label: 'New Blank Circuit', cmd: 'file.newblankcircuit' },
     { label: 'Open File...', cmd: 'file.importfromlocalfile', shortcut: 'Ctrl+O' },
     { label: 'Import From Text...', cmd: 'file.importfromtext' },
-    { label: 'Import From Dropbox...', cmd: 'file.importfromdropbox' },
     { label: 'Save As...', cmd: 'file.exportaslocalfile', shortcut: 'Ctrl+S' },
-    { label: 'Export As Link...', cmd: 'file.exportasurl' },
     { label: 'Export As Text...', cmd: 'file.exportastext' },
+    { label: 'Pack As Subcircuit...', cmd: 'file.packsubckt' },
     { label: 'Export As Image...', cmd: 'file.exportasimage' },
     { label: 'Copy Circuit Image to Clipboard', cmd: 'file.copypng' },
     { label: 'Export As SVG...', cmd: 'file.exportassvg' },
-    { label: 'Create Subcircuit...', cmd: 'file.createsubcircuit' },
-    { label: 'Find DC Operating Point', cmd: 'file.dcanalysis' },
-    { label: 'Recover Auto-Save', cmd: 'file.recover', disabled: true },
     { label: 'Print...', cmd: 'file.print', shortcut: 'Ctrl+P' },
     SEP,
+    { label: 'Show Results', cmd: 'view.results' },
     { label: 'Toggle Full Screen', cmd: 'view.fullscreen' },
     SEP,
     { label: 'About...', cmd: 'file.about' },
@@ -121,15 +116,7 @@ export function buildMenus() {
 
   const options = [
     ...OPTION_ITEMS.map(([key, label]) => ({ label, cmd: `opt:${key}` })),
-    { label: 'Shortcuts...', cmd: 'options.shortcuts' },
-    { label: 'Subcircuits...', cmd: 'options.subcircuits' },
-    { label: 'Other Options...', cmd: 'options.other' },
   ];
-
-  const micro = [
-    ['ArduinoElm', 'Arduino UNO'], ['ESP8266Elm', 'ESP8266'],
-    ['ESP32Elm', 'ESP32'], ['STM32Elm', 'STM32'],
-  ].map(([id, label]) => ({ label, cmd: `mode:add:${id}` }));
 
   // The real Circuits menu comes from a file I don't have; these are my own few examples.
   const circuits = SAMPLE_MENU.map((f) => ({
@@ -143,8 +130,6 @@ export function buildMenus() {
     { label: 'Draw', items: drawItems },
     { label: 'Simulation', items: simulation },
     { label: 'Options', items: options },
-    { label: 'AI Assistant', items: [{ label: 'Open AI Chatbot', cmd: 'ai.openchatbot' }] },
-    { label: 'Microcontroller', items: micro },
     { label: 'Circuits', items: circuits },
   ];
 }

@@ -12,6 +12,8 @@
 //   NGSPICE_BIN   path to the ngspice executable   (default: "ngspice" from PATH)
 //   MODELS_DIR    folder with .lib/.model files     (default: <project>/models)
 //   PORT          listen port                       (default 3001)
+//   CHAT_URL      chat endpoint for the side-panel chat (OpenAI-compatible /v1/chat/completions, as served by
+//                 Ollama, LM Studio, llama.cpp, vLLM ...; unset = chat disabled). CHAT_MODEL, CHAT_API_KEY optional.
 //   SIM_TIMEOUT_MS  kill a run after this long       (default 60000)
 //
 // Safety: it listens on 127.0.0.1 only, accepts JSON only, refuses cross-site browser requests,
@@ -21,12 +23,12 @@
 
 import http from 'node:http';
 import { spawn } from 'node:child_process';
-import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rename, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseRaw } from './rawfile.mjs';
-import { scanLibrary, safeFileName } from './library.mjs';
+import { scanLibrary, safeFileName, parseLibraryText, checkLibraryUpload, MAX_UPLOAD } from './library.mjs';
 
 const BIN = process.env.NGSPICE_BIN || 'ngspice';
 const PORT = Number(process.env.PORT || 3001);
@@ -38,10 +40,15 @@ const MODELS_DIR = process.env.MODELS_DIR || path.join(path.dirname(fileURLToPat
 // Anything that lets a netlist run commands, read/write files, or switch to the scripting language.
 const FORBIDDEN = /^\s*(\.(control|endc|include|inc|lib|read|csparam|osdi|spinit)\b|shell\b|source\b|codemodel\b|write\b|wrdata\b|load\b|echo\b)/im;
 
+// Words that make ngspice open a file from inside a model or element line (".model x d_source(input_file=...)").
+const FILE_ACCESS = /\b(input_file|file)\s*=|["']/i;
+
 export function checkNetlist(text) {
   if (typeof text !== 'string' || !text.trim()) return 'The netlist is empty.';
   // The first line is the title; ngspice never executes it, so a title like "Load test" is fine.
   const bad = FORBIDDEN.exec(text.split(/\r?\n/).slice(1).join('\n'));
+  const body = text.split(/\r?\n/).slice(1).join('\n');
+  if (!bad && FILE_ACCESS.test(body)) return 'Refused: the netlist refers to a file or contains a quote, which is not allowed by this server.';
   if (bad) return `Refused: the netlist contains "${bad[0].trim().slice(0, 30)}", which is not allowed by this server.`;
   return null;
 }
@@ -95,6 +102,53 @@ function errorLines(text) {
   return out.slice(0, 8).join('\n').trim();
 }
 
+const MAX_CHAT_BODY = 256 * 1024;
+const SYSTEM_PROMPT = 'You are an assistant inside a browser circuit editor that simulates with ngspice. Be concise and technically careful. When a netlist is supplied it is the current circuit.';
+
+export function chatConfig() {
+  let host = null;
+  try { host = process.env.CHAT_URL ? new URL(process.env.CHAT_URL).host : null; } catch { /* invalid */ }
+  return { configured: !!host, host, model: process.env.CHAT_MODEL || null };
+}
+
+/** Validate the browser's chat request -> { error } or { messages } ready to send to the model. */
+export function buildChatMessages(body) {
+  const list = body?.messages;
+  if (!Array.isArray(list) || !list.length || list.length > 60) return { error: 'Send between 1 and 60 messages.' };
+  const messages = [];
+  for (const m of list) {
+    if (!m || (m.role !== 'user' && m.role !== 'assistant') || typeof m.content !== 'string' || !m.content.trim() || m.content.length > 8000) {
+      return { error: 'Each message needs a role (user or assistant) and text of at most 8000 characters.' };
+    }
+    messages.push({ role: m.role, content: m.content });
+  }
+  if (messages[messages.length - 1].role !== 'user') return { error: 'The last message must come from the user.' };
+  const sys = [{ role: 'system', content: SYSTEM_PROMPT }];
+  if (typeof body.context === 'string' && body.context.trim()) sys.push({ role: 'system', content: `Current circuit netlist:\n${body.context.slice(0, 20000)}` });
+  return { messages: [...sys, ...messages] };
+}
+
+async function askModel(messages) {
+  const url = process.env.CHAT_URL;
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 120000);
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (process.env.CHAT_API_KEY) headers.Authorization = `Bearer ${process.env.CHAT_API_KEY}`;
+    const r = await fetch(url, { method: 'POST', headers, signal: ctl.signal, body: JSON.stringify({ model: process.env.CHAT_MODEL || undefined, messages, stream: false }) });
+    const text = await r.text();
+    let j = null;
+    try { j = JSON.parse(text); } catch { /* not JSON */ }
+    if (!r.ok) throw Object.assign(new Error(`The chat endpoint answered HTTP ${r.status}: ${(j?.error?.message ?? j?.error ?? text).toString().slice(0, 300)}`), { status: 502 });
+    const reply = j?.choices?.[0]?.message?.content ?? j?.message?.content ?? j?.response;
+    if (typeof reply !== 'string') throw Object.assign(new Error('The chat endpoint replied in a format this app does not understand (expected choices[0].message.content).'), { status: 502 });
+    return reply.slice(0, 100000);
+  } catch (e) {
+    if (e.status) throw e;
+    throw Object.assign(new Error(e.name === 'AbortError' ? 'The chat endpoint did not answer within 120 s.' : `Could not reach the chat endpoint (${e.cause?.code ?? e.message}).`), { status: 502 });
+  } finally { clearTimeout(timer); }
+}
+
 function send(res, status, obj) {
   const body = JSON.stringify(obj);
   res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
@@ -126,6 +180,52 @@ export function makeServer() {
       if (req.method === 'GET' && req.url === '/api/models') {
         const lib = await scanLibrary(MODELS_DIR);
         return send(res, 200, lib);
+      }
+      if (req.method === 'POST' && req.url === '/api/models') {
+        // Save a model file into the models folder. Same-origin JSON only; the content is checked first.
+        if (!/^application\/json/i.test(req.headers['content-type'] ?? '')) return send(res, 415, { error: 'Send JSON.' });
+        let size = 0;
+        const chunks = [];
+        for await (const c of req) {
+          size += c.length;
+          if (size > MAX_UPLOAD + 4096) return send(res, 413, { error: 'File too large.' });
+          chunks.push(c);
+        }
+        let body;
+        try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return send(res, 400, { error: 'Invalid JSON.' }); }
+        const problem = checkLibraryUpload(body.name, body.content);
+        if (problem) return send(res, 400, { error: problem });
+        const before = await scanLibrary(MODELS_DIR);
+        const target = path.join(MODELS_DIR, body.name);
+        const exists = await stat(target).then((st) => st.isFile(), () => false);
+        if (exists && body.overwrite !== true) return send(res, 409, { error: `${body.name} is already in the models folder.`, exists: true });
+        if (!exists && before.files.length >= 200) return send(res, 400, { error: 'The models folder already holds 200 files, the most the library lists.' });
+        await mkdir(MODELS_DIR, { recursive: true });
+        const tmp = `${target}.upload-${process.pid}`;
+        await writeFile(tmp, body.content, 'utf8');
+        await rename(tmp, target);
+        const found = parseLibraryText(body.content, body.name);
+        return send(res, 200, {
+          ok: true, file: body.name, replaced: exists,
+          models: found.filter((d) => d.kind === 'model').length, subckts: found.filter((d) => d.kind === 'subckt').length,
+        });
+      }
+      if (req.method === 'GET' && req.url === '/api/chat/config') return send(res, 200, chatConfig());
+      if (req.method === 'POST' && req.url === '/api/chat') {
+        if (!/^application\/json/i.test(req.headers['content-type'] ?? '')) return send(res, 415, { error: 'Send JSON.' });
+        if (!chatConfig().configured) return send(res, 503, { error: 'Chat is not set up. Start the server with CHAT_URL=<your endpoint> (see the README).' });
+        let size = 0;
+        const chunks = [];
+        for await (const c of req) {
+          size += c.length;
+          if (size > MAX_CHAT_BODY) return send(res, 413, { error: 'Chat request too large.' });
+          chunks.push(c);
+        }
+        let body;
+        try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return send(res, 400, { error: 'Invalid JSON.' }); }
+        const built = buildChatMessages(body);
+        if (built.error) return send(res, 400, { error: built.error });
+        try { return send(res, 200, { reply: await askModel(built.messages) }); } catch (e) { return send(res, e.status ?? 500, { error: e.message }); }
       }
       if (req.method === 'POST' && req.url === '/api/simulate') {
         if (!/^application\/json/i.test(req.headers['content-type'] ?? '')) return send(res, 415, { error: 'Send JSON.' });

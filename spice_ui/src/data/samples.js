@@ -108,11 +108,24 @@ export const SAMPLES = {
       ['GroundElm', 480, 144, 480, 160],
     ],
   },
+  nand: {
+    title: 'NAND gate with logic inputs',
+    // Click A or B to toggle it 0 / 1. Run once (Analysis: Operating Point); after that every click re-runs
+    // and the lamp shows the output. The 10 k resistor only gives the circuit its ground reference.
+    elements: [
+      ['LogicInputElm', 192, 112, 176, 112],
+      ['LogicInputElm', 192, 144, 176, 144],
+      ['NandGateElm', 192, 128, 256, 128],
+      ['LogicOutputElm', 256, 128, 272, 128],
+      ['ResistorElm', 256, 128, 256, 192, '10 kΩ'],
+      ['GroundElm', 256, 192, 256, 208],
+    ],
+  },
 };
 
 export const SAMPLE_MENU = [
   { folder: 'Basics', keys: ['rc', 'divider', 'led'] },
   { folder: 'Diodes', keys: ['rectifier'] },
-  { folder: 'Digital', keys: ['dff'] },
+  { folder: 'Digital', keys: ['nand', 'dff'] },
   { folder: 'Op-Amps', keys: ['amp'] },
 ];

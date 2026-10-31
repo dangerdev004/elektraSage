@@ -280,3 +280,85 @@ other than sine and clock.
 Example: Circuits > Digital > D flip-flop (clocked sampling). Set Analysis to Transient, step 20u, stop 20m.
 Pull-down resistors on SET and RST matter: an open switch is 1 GOhm to 5 V, which a logic input still reads
 as HIGH unless something pulls the net down.
+
+## Export and print
+
+File > Export As Image saves a PNG (2x size), Copy Circuit Image to Clipboard puts the same PNG on the clipboard,
+Export As SVG saves a vector file, and Print (Ctrl+P) prints the circuit as a vector page. All of them redraw the
+circuit in black on white with no grid, selection colour or drag handles, with a margin around it. Value labels
+and node labels follow the same options as the canvas. Copying to the clipboard needs localhost or https and a
+browser that allows it; Export As Image is the fallback.
+
+## Logic Input and Logic Output
+
+Logic Input is a clickable source: click it to toggle 0 / 1 (it drives its net with 0 V or the logic high level,
+default 5 V). Logic Output is a lamp that reads its net from the last result: lit with a 1 when the net is above
+half the logic level, 0 when below, and "?" when there is no result or the circuit has changed since the run.
+For a transient run the lamp shows the value at the last time point. Clicking an input re-runs the simulation
+when a result is already on screen. Example: Circuits > Digital > NAND gate with logic inputs (run it once
+with Analysis set to Operating Point).
+
+## SPICE directives
+
+Draw > Outputs and Labels > SPICE Directive (shortcut `.`) places a text block. Double-click it to edit. Only these
+commands are accepted: `.param .model .options .option .ic .nodeset .temp .global .func .meas .measure`. Lines
+starting with `+` continue the previous line; `*` starts a comment. Analysis commands (`.tran`, `.ac`, ...) are
+refused because the analysis comes from Simulation > Analysis Setup; element lines are refused too. The same check
+runs in the editor and in the netlist builder, and the server independently refuses `.control`, `.include`, shell
+and file-access constructs.
+
+## Model library files
+
+Simulation > Model Library lists every `.model` and `.subckt` found in the `models/` folder. Upload... adds files
+(`.lib .mod .model .cir .sp .spi .inc .txt`, up to 5 MB); a name that already exists asks before replacing. Uploads
+containing `.control`, `.include` with a path, `file=` or similar are refused. You can also copy files into the
+folder and press Refresh.
+
+## Subcircuits from the library
+
+Draw > Outputs and Labels > Subcircuit (from library) places a block. Double-click it and pick a `.subckt`; the
+block's pins are taken from the definition, in SPICE order (first half down the left side, the rest down the right),
+and `PARAMS:` values can be overridden (blank = the subcircuit's default). The netlist gets
+`X1 <nodes> NAME param=value` and the server includes the library file. The pin list is saved in the circuit file;
+if the library file later changes its pin count the netlist builder asks you to pick the subcircuit again.
+Limits: pins are not reordered or moved around, parameters must be numbers, and nested subcircuits work only inside
+the library file's own definitions. Packing your own circuit into a block is the next step.
+
+## Labeled nodes
+
+Draw > Outputs and Labels > Labeled Node is a one-pin flag. Double-click it to set the name. Labels with the same
+name are the same net even with no wire between them (names are case-insensitive, as in SPICE), and that name is used
+in the netlist and results (`v(vcc)` instead of `v(n3)`). A label named `0` or `gnd` connects to ground. Errors are
+reported for an empty or invalid name, a name like `n3` / `d_x` / `z_x` (reserved for automatic names), and a wire
+that joins two different label names. Unlabeled nets keep the automatic names n1, n2, ...
+
+## Packing your own circuit as a subcircuit
+
+Mark the pins with Draw > Outputs and Labels > Subcircuit Port (name each one; ports with the same name are one pin),
+then File > Pack As Subcircuit... Choose a name and Save to library: the circuit is written as `<name>.lib` in the
+models folder as a `.subckt` whose pins are the ports, top to bottom then left to right (the preview shows the text).
+It then appears in the Subcircuit block's list. No ground is needed inside the circuit; ground (0) is shared with the
+outside. Not supported yet: circuits that contain Subcircuit blocks, digital parts, library models or SPICE
+Directives (all refused with a message). The block keeps no link to the canvas: edit the circuit, pack again with the
+same name and choose Replace. Existing blocks pick up the new definition on the next run; if the pin count changed,
+re-pick it in the block's dialog.
+
+## Results window
+
+The results area is hidden until you press RUN. It then opens as a floating window: drag the header to move it,
+drag any edge or corner to resize it, **Dock** snaps it to the bottom of the canvas (drag its top edge to resize),
+**Undock** floats it again, and ✕ hides it. View > Show Results toggles it. Floating/docked state, position and size
+are remembered in the browser (localStorage) between sessions.
+
+## Side panel and chat
+
+Drag the left edge of the side panel to resize it (150 px up to 60% of the window); » folds it away completely and «
+brings it back. Width and collapsed state are remembered. The chat at the bottom of the panel talks to your own
+model through the local server, which forwards to an OpenAI-compatible endpoint (Ollama, LM Studio, llama.cpp, vLLM, ...):
+
+    CHAT_URL=http://localhost:11434/v1/chat/completions CHAT_MODEL=llama3 npm run server
+
+`CHAT_API_KEY` is optional (sent as a Bearer token). The endpoint is set only by these environment variables, never by the
+browser. "Send circuit netlist" attaches the current netlist as context. The reply is read from
+`choices[0].message.content` (Ollama's `message.content` also works); no streaming yet. The conversation is kept in memory
+only. If your agent uses a different request format, change `askModel` in `server/server.mjs`.

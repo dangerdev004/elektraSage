@@ -34,7 +34,11 @@ export function parseLibraryText(text, file) {
         if (/^params:?$/i.test(tok) || tok.includes('=')) break; // everything after PARAMS: is a parameter
         pins.push(tok);
       }
-      found.push({ kind: 'subckt', name: m[1], type: 'SUBCKT', pins, file });
+      const toks = m[2].split(/\s+/).filter(Boolean);
+      const rest = toks.slice(pins.length).join(' ');
+      const params = [];
+      for (const pm of rest.matchAll(/([A-Za-z_][\w]*)\s*=\s*(\S+)/g)) params.push({ name: pm[1], def: pm[2] });
+      found.push({ kind: 'subckt', name: m[1], type: 'SUBCKT', pins, params, file });
     }
   }
   return found;
@@ -71,4 +75,25 @@ export async function scanLibrary(dir) {
     }
   }
   return out;
+}
+
+// ---- uploads -----------------------------------------------------------------------------------
+// A library file the browser sends is checked before it is saved. Model files are plain SPICE text, so
+// anything that runs commands or reaches outside the models folder is refused.
+const UPLOAD_DANGEROUS = /^\s*(\.(control|endc|csparam|osdi|spinit|read)\b|shell\b|source\b|codemodel\b|write\b|wrdata\b|load\b|echo\b)/im;
+const UPLOAD_PATHY = /^\s*\.(include|inc|lib)\b[^\n]*([\\/]|\.\.|\b[a-z]:)/im; // .include with a path, "..", or a drive letter
+const UPLOAD_FILE_ARG = /\b(input_file|file)\s*=/i;
+export const MAX_UPLOAD = 5 * 1024 * 1024;
+
+/** -> null when the file may be saved, else the reason it was refused. */
+export function checkLibraryUpload(name, text) {
+  if (!safeFileName(name)) return 'Use a plain file name (no folders, quotes or special characters).';
+  if (!LIB_EXT.has(path.extname(name).toLowerCase())) return `Use one of these file types: ${[...LIB_EXT].join(' ')}.`;
+  if (typeof text !== 'string' || !text.trim()) return 'The file is empty.';
+  if (Buffer.byteLength(text, 'utf8') > MAX_UPLOAD) return `The file is larger than ${MAX_UPLOAD / 1024 / 1024} MB.`;
+  if (text.includes('\u0000')) return 'This looks like a binary file, not SPICE text.';
+  if (UPLOAD_DANGEROUS.test(text)) return 'The file contains a script or file command (.control, shell, write, source, load ...), which is not allowed.';
+  if (UPLOAD_PATHY.test(text)) return 'The file includes another file by path. Only plain file names in the same folder are allowed.';
+  if (UPLOAD_FILE_ARG.test(text)) return 'The file has a model that reads a data file (file= / input_file=), which is not allowed.';
+  return null;
 }

@@ -6,9 +6,13 @@ import { parseValue, parseSourceText, num } from '../src/sim/units.js';
 import { ANALYSES, defaultParams, buildCommand, validateParams } from '../src/sim/analysis.js';
 import { analyzeNodes, buildCircuitNetlist } from '../src/sim/netlist.js';
 import { normalizeRaw, buildTraces, labelOf, defaultVisible, measure } from '../src/sim/results.js';
+import { checkDirectives, logicalLines } from '../src/sim/directives.js';
+import { directiveBox } from '../src/canvas/directive.js';
+import { circuitToSvg, circuitBounds, SvgContext } from '../src/canvas/export.js';
 import { NgspiceServerEngine } from '../src/sim/engine-server.js';
 import { formatSI, stepValue, stepText, opampParam, withUnit, PART_PARAMS } from '../src/sim/params.js';
 import { Editor } from '../src/canvas/editor.js';
+import { parseLibraryText } from '../server/library.mjs';
 import { SAMPLES } from '../src/data/samples.js';
 import * as mock from './mock-eecircuit.mjs';
 
@@ -514,6 +518,196 @@ await test('sample: D flip-flop builds, switches start open with pull-downs', ()
   assert.match(r.text, /^A1 d_\w+ d_\w+ d_\w+ d_\w+ d_\w+ d_\w+ F_DFF$/m);   // D CLK SET RST Q Q-bar
   assert.equal((r.text.match(/ 1e9$/gm) ?? []).length, 2);                    // both switches open
   assert.equal((r.text.match(/^R\d+ \S+ 0 10000$/gm) ?? []).length, 2);          // pull-downs to ground
+});
+
+await test('export: SVG of a circuit, bounds, empty circuit, arcs and text', () => {
+  const ed = new Editor();
+  assert.equal(circuitToSvg(ed), null);
+  assert.equal(circuitBounds(ed), null);
+  ed.loadElements(SAMPLES.dff.elements);
+  const svg = circuitToSvg(ed);
+  assert.match(svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="\d+" height="\d+" viewBox="0 0 \d+ \d+">/);
+  assert.match(svg, /<rect width="\d+" height="\d+" fill="#ffffff"\/>/);
+  assert.ok((svg.match(/<path /g) ?? []).length > 20, 'draws the symbols');
+  assert.match(svg, />D FF<\/text>/);                        // chip title
+  assert.match(svg, />10 kΩ<\/text>/);                       // value labels, escaped properly
+  assert.ok(!/NaN|undefined/.test(svg), 'no NaN or undefined in the output');
+  assert.match(svg, /<\/svg>\n$/);
+  // the document is well-formed enough that every tag closes
+  assert.equal((svg.match(/<text /g) ?? []).length, (svg.match(/<\/text>/g) ?? []).length);
+  // everything lies inside the viewBox
+  const b = circuitBounds(ed);
+  for (const el of ed.els) for (const t of ed.terminals(el)) assert.ok(t.x >= b.x && t.x <= b.x + b.w && t.y >= b.y && t.y <= b.y + b.h);
+  // SvgContext: half circle through the right side, then a mirrored copy
+  const c = new SvgContext();
+  c.beginPath(); c.arc(0, 0, 10, Math.PI / 2, -Math.PI / 2, true); c.stroke();
+  const xs = [...c.out[0].matchAll(/[ML]([-\d.]+) ([-\d.]+)/g)].map((m) => +m[1]);
+  assert.ok(Math.max(...xs) > 9.9 && Math.min(...xs) > -0.01, 'counter-clockwise half circle bulges to +x');
+  const m = new SvgContext();
+  m.translate(5, 5); m.scale(1, -1);
+  m.beginPath(); m.moveTo(0, 2); m.lineTo(0, 4); m.stroke();
+  assert.match(m.out[0], /d="M5 3L5 1"/);
+  const t2 = new SvgContext();
+  t2.textAlign = 'center'; t2.textBaseline = 'middle'; t2.font = '9px sans-serif'; t2.fillText('A<B', 1, 2);
+  assert.match(t2.out[0], /text-anchor="middle" dominant-baseline="central" fill="#000000">A&lt;B<\/text>/);
+});
+
+await test('mouse-wheel value editing steps the part under the cursor', () => {
+  const ed = new Editor();
+  ed.loadElements([['ResistorElm', 160, 160, 224, 160, '1 kΩ'], ['CapacitorElm', 160, 224, 224, 224, '1 F'], ['WireElm', 0, 0, 64, 0]]);
+  ed.setOptions({ wheelEdit: true });
+  const at = (x, y) => ed.toWorld ? { x: x * ed.view.s + ed.view.ox, y: y * ed.view.s + ed.view.oy } : { x, y };
+  const up = { deltaY: -100 };
+  const down = { deltaY: 100 };
+  assert.equal(ed.wheelEditValue(up, at(192, 160)), true);
+  assert.equal(ed.els[0].value, '2kΩ');                      // 1k -> 2k, unit re-attached
+  ed.wheelEditValue(up, at(192, 160));
+  assert.equal(ed.els[0].value, '5kΩ');
+  ed.wheelEditValue(down, at(192, 160));
+  assert.equal(ed.els[0].value, '2kΩ');
+  assert.equal(ed.undoStack.length, 1);                       // a burst of scrolling is one undo step
+  ed.wheelEditValue(up, at(192, 224));
+  assert.equal(ed.els[1].value, '2F');                        // 1 farad, not 1 femto
+  assert.equal(ed.wheelEditValue(up, at(500, 500)), false);   // nothing under the cursor: zoom as usual
+  assert.equal(ed.wheelEditValue(up, at(32, 0)), false);      // wires have no value
+  ed.setOptions({ noEdit: true });
+});
+
+await test('logic input and output: DC source from state, lamp adds nothing, click toggles', () => {
+  const ed = new Editor();
+  ed.loadElements([['LogicInputElm', 0, 0, 16, 0], ['InverterElm', 64, 0, 128, 0], ['WireElm', 0, 0, 64, 0], ['LogicOutputElm', 128, 0, 144, 0], ['GroundElm', 192, 0, 192, 16], ['ResistorElm', 128, 0, 192, 0]]);
+  const build2 = () => buildCircuitNetlist({ elements: ed.els, terminalsOf: (e) => ed.terminals(e), analysis: { type: 'op', params: {} } });
+  const r0 = build2();
+  assert.ok(r0.ok, r0.errors.join());
+  assert.match(r0.text, /^V1 n1 0 DC 0$/m);                  // default LOW
+  assert.doesNotMatch(r0.text, /LogicOutput/);               // the lamp is not a circuit element
+  ed.els[0].params = { high: 'true', vhigh: '3.3' };
+  assert.match(build2().text, /^V1 n1 0 DC 3\.3$/m);
+  // clicking the input toggles it (pointerUp path): simulate the drag record it leaves behind
+  ed.els[0].params = {};
+  ed.drag = { type: 'move', moved: false, hitId: ed.els[0].id };
+  ed.pointerUp({ shiftKey: false, pointerId: 1 });
+  assert.equal(ed.els[0].params.high, 'true');
+});
+
+await test('sample: NAND with logic inputs builds', () => {
+  const ed = new Editor();
+  ed.loadElements(SAMPLES.nand.elements);
+  ed.els[0].params = { high: 'true' };
+  ed.els[1].params = { high: 'true' };
+  const r = buildCircuitNetlist({ elements: ed.els, terminalsOf: (e) => ed.terminals(e), analysis: { type: 'op', params: {} } });
+  assert.ok(r.ok, r.errors.join());
+  assert.equal(r.warnings.length, 0, r.warnings.join());
+  assert.match(r.text, /^V1 n1 0 DC 5$/m);
+  assert.match(r.text, /^A1 \[d_n1 d_n2\] d_n3 G_NAND$/m);
+});
+
+await test('SPICE directives: allowlist, continuation, blocked commands, netlist and canvas box', () => {
+  const ok = checkDirectives('* a comment\n.param vcc=5 ; trailing\n.model DX D(IS=1e-14\n+ RS=2)\n.options reltol=1e-4\n.ic v(n1)=2');
+  assert.deepEqual(ok.problems, []);
+  assert.deepEqual(ok.lines, ['.param vcc=5', '.model DX D(IS=1e-14 RS=2)', '.options reltol=1e-4', '.ic v(n1)=2']);
+  const bad = (t) => checkDirectives(t).problems.join(' | ');
+  assert.match(bad('.include foo.lib'), /\.include is not allowed/);
+  assert.match(bad('.lib x'), /\.lib is not allowed/);
+  assert.match(bad('.control'), /\.control is not allowed/);
+  assert.match(bad('.tran 1u 1m'), /Analysis Setup/);
+  assert.match(bad('R1 a b 1k'), /not a directive/);
+  assert.match(bad('.model x d_source(input_file=data.txt)'), /file or script/);
+  assert.match(bad('.param s="abc"'), /quotes/);
+  assert.match(bad('.param x=1 ; ok\n.shell ls'), /\.shell is not allowed/);
+  assert.equal(logicalLines('\n\n* c\n').length, 0);
+  // in a circuit: the lines land after the model cards, errors keep the run from starting
+  const ed = new Editor();
+  ed.loadElements([['DCVoltageElm', 0, 0, 0, 64, '5 V'], ['ResistorElm', 0, 0, 64, 0, '1k'], ['WireElm', 64, 0, 64, 64], ['WireElm', 0, 64, 64, 64], ['GroundElm', 0, 64, 0, 80],
+    ['DirectiveElm', 160, 0, 208, 0, '.param gain=10\n.options reltol=1e-4']]);
+  const an = { type: 'op', params: {} };
+  const r = buildCircuitNetlist({ elements: ed.els, terminalsOf: (e) => ed.terminals(e), analysis: an });
+  assert.ok(r.ok, r.errors.join());
+  assert.match(r.text, /\.param gain=10\n\.options reltol=1e-4\n\.op\n\.end/);
+  ed.els.at(-1).value = '.include evil.lib';
+  const r2 = buildCircuitNetlist({ elements: ed.els, terminalsOf: (e) => ed.terminals(e), analysis: an });
+  assert.equal(r2.ok, false);
+  assert.match(r2.errors.join(), /SPICE Directive: line 1: \.include is not allowed/);
+  // the block is what you click on, grows with the text, and is exported
+  ed.els.at(-1).value = '.param a=1\n.param averyveryverylongname=2';
+  const b = directiveBox(ed.els.at(-1));
+  assert.equal(b.lines.length, 2);
+  assert.ok(b.w > 150 && b.h === 2 * 14 + 12);
+  assert.equal(ed.hitTest(b.x + b.w - 3, b.y + b.h - 3)?.type, 'DirectiveElm');
+  assert.equal(ed.hitTest(b.x + b.w + 40, b.y), null);
+  assert.match(circuitToSvg(ed), /averyveryverylongname=2<\/text>/);
+});
+
+await test('Subcircuit block: pins from the library definition, X card, params, document round trip', () => {
+  const library = [{ kind: 'subckt', name: 'AMP2', type: 'SUBCKT', pins: ['in', 'out', 'vcc', 'gnd'], params: [{ name: 'gain', def: '10' }], file: 'amp.lib' }];
+  const ed = new Editor();
+  ed.loadElements([['SubcktElm', 0, 0, 128, 0]]);
+  assert.equal(ed.terminals(ed.els[0]).length, 0);
+  ed.setProps(ed.els[0].id, { model: 'AMP2', pins: library[0].pins, params: { gain: '5' } });
+  const t = ed.terminals(ed.els[0]);
+  assert.equal(t.length, 4);
+  assert.deepEqual(t.map((p) => [p.x, p.y]), [[0, -16], [0, 16], [128, -16], [128, 16]]);
+  // wire ports to nets: ground on gnd, source on in
+  ed.loadElements([['SubcktElm', 0, 0, 128, 0, undefined], GND, ['DCVoltageElm', 200, 0, 200, 64, '5 V']]);
+  ed.setProps(ed.els[0].id, { model: 'AMP2', pins: library[0].pins, params: { gain: '5' } });
+  const r = buildCircuitNetlist({ elements: ed.els, terminalsOf: (e) => ed.terminals(e), title: 't', analysis: { type: 'op', params: {} }, library });
+  assert.match(r.text, /^X1 \S+ \S+ \S+ \S+ AMP2 gain=5$/m);
+  assert.deepEqual(r.libs, ['amp.lib']);
+  // missing from library / not chosen
+  const none = buildCircuitNetlist({ elements: ed.els, terminalsOf: (e) => ed.terminals(e), title: 't', analysis: { type: 'op', params: {} }, library: [] });
+  assert.ok(none.errors.some((m) => /AMP2.*not found/.test(m)));
+  const changed = buildCircuitNetlist({ elements: ed.els, terminalsOf: (e) => ed.terminals(e), title: 't', analysis: { type: 'op', params: {} }, library: [{ ...library[0], pins: ['a', 'b'] }] });
+  assert.ok(changed.errors.some((m) => /4 pins but AMP2 now has 2/.test(m)));
+  // saved file keeps the pins
+  const doc = JSON.parse(JSON.stringify(ed.toDocument('x')));
+  const ed2 = new Editor();
+  ed2.loadDocument(doc);
+  assert.deepEqual(ed2.els[0].pins, library[0].pins);
+  assert.equal(ed2.terminals(ed2.els[0]).length, 4);
+  // odd pin count: 3 pins -> 2 left, 1 right
+  ed2.setProps(ed2.els[0].id, { pins: ['a', 'b', 'c'] });
+  assert.deepEqual(ed2.terminals(ed2.els[0]).map((p) => p.x), [0, 0, 128]);
+});
+
+await test('Labeled nodes: same name joins nets, names reach the netlist, 0/gnd is ground, conflicts reported', () => {
+  const r = build([
+    ['DCVoltageElm', 0, 0, 0, 64, '5 V'], ['LabeledNodeElm', 0, 0, 16, 0, 'VCC'],
+    ['LabeledNodeElm', 200, 0, 216, 0, 'vcc'], ['ResistorElm', 200, 0, 200, 64, '1k'],
+    ['LabeledNodeElm', 0, 64, 16, 64, 'GND'], ['LabeledNodeElm', 200, 64, 216, 64, '0'],
+  ]);
+  assert.deepEqual(r.errors, []);
+  assert.match(r.text, /^V1 vcc 0 DC 5$/m);
+  assert.match(r.text, /^R1 vcc 0 1000$/m);
+  const bad = build([['ResistorElm', 0, 0, 64, 0, '1k'], ['LabeledNodeElm', 0, 0, 16, 0, 'a'], ['LabeledNodeElm', 64, 0, 80, 0, 'b'], ['WireElm', 0, 0, 64, 0], ['GroundElm', 300, 0, 300, 16]]);
+  assert.ok(bad.errors.some((m) => /"a" and "b" are on the same net/.test(m)));
+  const res = build([['LabeledNodeElm', 0, 0, 16, 0, 'n3'], ['LabeledNodeElm', 40, 0, 56, 0, ''], ['LabeledNodeElm', 80, 0, 96, 0, '1x'], GND]);
+  assert.equal(res.errors.filter((m) => /Labeled Node/.test(m)).length, 3);
+});
+
+let ed2;
+await test('Pack as subcircuit: ports become pins, body is wrapped, unsupported content refused', () => {
+  const ed = new Editor();
+  // divider: IN -- R1 -- OUT -- R2 -- ground, ports IN and OUT
+  ed.loadElements([
+    ['PortElm', 0, 0, 16, 0, 'in'], ['ResistorElm', 0, 0, 64, 0, '1k'], ['PortElm', 64, 0, 80, 0, 'out'],
+    ['ResistorElm', 64, 0, 64, 64, '2k'], ['GroundElm', 64, 64, 64, 80],
+  ]);
+  const pk = (name) => buildCircuitNetlist({ elements: ed.els, terminalsOf: (e) => ed.terminals(e), title: 'Divider', analysis: null, pack: { name } });
+  const r = pk('DIV');
+  assert.deepEqual(r.errors, []);
+  assert.deepEqual(r.ports, ['in', 'out']);
+  assert.match(r.text, /^\.subckt DIV in out$/m);
+  assert.match(r.text, /^R1 in out 1000$/m);
+  assert.match(r.text, /^R2 out 0 2000$/m);
+  assert.match(r.text, /^\.ends DIV$/m);
+  // the packed text parses back as a library subcircuit with those pins
+  const found = parseLibraryText(r.text, 'DIV.lib')[0];
+  assert.deepEqual([found.name, found.pins], ['DIV', ['in', 'out']]);
+  assert.ok(pk('1bad').errors.some((m) => /Subcircuit name/.test(m)));
+  // no ports, no ground needed
+  const none = buildCircuitNetlist({ elements: build([['ResistorElm', 0, 0, 64, 0, '1k']]) && (() => { const e = new Editor(); e.loadElements([['ResistorElm', 0, 0, 64, 0, '1k']]); ed2 = e; return e.els; })(), terminalsOf: (x) => ed2.terminals(x), analysis: null, pack: { name: 'X' } });
+  assert.ok(none.errors.some((m) => /at least one Subcircuit Port/.test(m)));
+  assert.ok(!none.errors.some((m) => /no ground/.test(m)));
 });
 
 console.log(`\n${n} tests passed`);

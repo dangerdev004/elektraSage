@@ -9,6 +9,7 @@ import { getDef } from '../canvas/parts.js';
 import { parseValue, parseSourceText, num } from './units.js';
 import { buildCommand, validateParams } from './analysis.js';
 import { PART_PARAMS, GATE_TYPES, SEQ_TYPES, opampParam } from './params.js';
+import { checkDirectives } from './directives.js';
 
 const ANNOTATION = new Set(['TextElm', 'BoxElm', 'LineElm']);
 
@@ -37,6 +38,8 @@ export function analyzeNodes(elements, terminalsOf) {
   };
 
   const keys = new Map();
+  const labelProblems = [];
+  const labelOf = new Map(); // union key -> label name
   let hasGround = false;
   for (const el of elements) {
     const ks = terminalsOf(el).map(keyOf);
@@ -44,16 +47,33 @@ export function analyzeNodes(elements, terminalsOf) {
     ks.forEach(find);
     if (el.type === 'WireElm') union(ks[0], ks[1]);
     if (el.type === 'GroundElm') { hasGround = true; union(ks[0], 'GND'); }
+    if (el.type === 'LabeledNodeElm' || el.type === 'PortElm') {
+      // Same name = same net, as in SPICE (names are case-insensitive). 0 and gnd mean ground.
+      const nm = String(el.value ?? '').trim().toLowerCase();
+      if (!nm) labelProblems.push('Labeled Node: the label has no name (double-click it to type one).');
+      else if (!/^[a-z_][\w.]*$|^0$/.test(nm)) labelProblems.push(`Labeled Node: "${el.value}" is not a usable net name (letters, digits, _ and . only, not starting with a digit).`);
+      else if (/^(n\d+|d_.*|z_.*)$/.test(nm)) labelProblems.push(`Labeled Node: "${nm}" is reserved for automatic node names; choose another name.`);
+      else if (nm === '0' || nm === 'gnd') { hasGround = true; union(ks[0], 'GND'); }
+      else { union(ks[0], `L:${nm}`); labelOf.set(`L:${nm}`, nm); }
+    }
   }
 
   const names = new Map();
   let n = 0;
   const gndRoot = hasGround ? find('GND') : null;
+  // each net may carry at most one label name; a wire joining two different names is reported
+  const rootLabel = new Map();
+  for (const [k, nm] of labelOf) {
+    const r = find(k);
+    if (r === gndRoot) { labelProblems.push(`Labeled Node: "${nm}" is joined to ground.`); continue; }
+    if (rootLabel.has(r) && rootLabel.get(r) !== nm) labelProblems.push(`Labeled Node: "${rootLabel.get(r)}" and "${nm}" are on the same net; give it one name.`);
+    else rootLabel.set(r, nm);
+  }
   for (const el of elements) {
     for (const k of keys.get(el.id)) {
       const r = find(k);
       if (names.has(r)) continue;
-      names.set(r, r === gndRoot ? '0' : `n${++n}`);
+      names.set(r, r === gndRoot ? '0' : rootLabel.get(r) ?? `n${++n}`);
     }
   }
 
@@ -62,6 +82,7 @@ export function analyzeNodes(elements, terminalsOf) {
     keysOf: (el) => keys.get(el.id),
     nodeOfTerminal: (el, i) => names.get(find(keys.get(el.id)[i])),
     nodeNames: [...names.values()],
+    labelProblems: [...new Set(labelProblems)],
   };
 }
 
@@ -72,7 +93,7 @@ export function analyzeNodes(elements, terminalsOf) {
  *   libs: model-library file names the deck needs (the server adds the .include lines)
  * `library` = the model list from the server: [{ kind, name, type, file }]
  */
-export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', analysis, library = [] }) {
+export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', analysis, library = [], pack = null }) {
   const errors = [];
   const warnings = [];
   const cards = [];
@@ -85,11 +106,12 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
   const unsupported = new Map();
   const libs = new Set(); // library files the circuit needs
 
-  const parts = elements.filter((e) => e.type !== 'WireElm' && e.type !== 'GroundElm' && !ANNOTATION.has(e.type));
+  const parts = elements.filter((e) => e.type !== 'WireElm' && e.type !== 'GroundElm' && e.type !== 'LabeledNodeElm' && e.type !== 'PortElm' && !ANNOTATION.has(e.type));
   if (!elements.length) errors.push('The circuit is empty.');
 
   const nodes = analyzeNodes(elements, terminalsOf);
-  if (elements.length && !nodes.hasGround) {
+  errors.push(...nodes.labelProblems);
+  if (elements.length && !nodes.hasGround && !pack) {
     errors.push('There is no ground. Add one with Draw > Inputs and Sources > Add Ground.');
   }
 
@@ -164,6 +186,7 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
     return v;
   };
 
+  const directiveLines = []; // lines from SPICE Directive parts
   const gates = []; // logic gates and flip-flops, wired up with bridges after the loop
   const openNets = new Set(); // nets of unused optional pins (SET, RST, unused Q-bar): no warning for those
   const gateModels = new Map(); // 'd_and|delay' -> model name
@@ -220,6 +243,27 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
         sources.push(r);
         // SIN for transient; AC 1 = unit stimulus, so an AC sweep reads directly as gain.
         cards.push(`${r} ${t[0]} ${neg} SIN(${num(offset)} ${num(amp)} ${num(freq ?? 40)}${phase ? ` 0 0 ${num(phase)}` : ''}) AC 1`);
+        break;
+      }
+      case 'DirectiveElm': {
+        const { lines, problems } = checkDirectives(text);
+        problems.forEach((p) => errors.push(`SPICE Directive: ${p}`));
+        directiveLines.push(...lines);
+        break;
+      }
+      case 'LogicInputElm': {
+        const vh = parseValue(el.params?.vhigh?.trim() ? el.params.vhigh : '5', 'V');
+        if (!(vh > 0)) { bad('logic high level must be a positive number', el.params?.vhigh); break; }
+        use(t[0]);
+        const r = ref(el, 'V');
+        sources.push(r);
+        cards.push(`${r} ${t[0]} 0 DC ${String(el.params?.high) === 'true' ? num(vh) : '0'}`);
+        break;
+      }
+      case 'LogicOutputElm': { // a lamp: reads its net, adds nothing to the circuit
+        const vh = parseValue(el.params?.vhigh?.trim() ? el.params.vhigh : '5', 'V');
+        if (!(vh > 0)) { bad('logic high level must be a positive number', el.params?.vhigh); break; }
+        use(t[0]);
         break;
       }
       case 'ClockElm': {
@@ -293,6 +337,29 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
           return { net: t[idx], dir: role === 'q' ? 'out' : 'in', opt: role === 'o' || role === 'q', idx };
         });
         gates.push({ el, ref: ref(el, 'A'), model: gateModels.get(key), vhigh, vec: 0, ports });
+        break;
+      }
+
+      // A .subckt from the model library: pins come from its definition, in that order.
+      case 'SubcktElm': {
+        const entry = el.model ? library.find((m) => m.kind === 'subckt' && m.name === el.model) : null;
+        if (!el.model) { bad('no subcircuit chosen (double-click the block to pick one from the library)'); break; }
+        if (!entry) { bad(`subcircuit "${el.model}" was not found in the model library (is the server running, and is the file still in the models folder?)`); break; }
+        if (!/^[\w.+\-#$%@!]+$/.test(entry.name)) { bad(`subcircuit name "${entry.name}" has characters this app does not pass to SPICE`); break; }
+        if (t.length !== entry.pins.length) { bad(`the block has ${t.length} pins but ${entry.name} now has ${entry.pins.length}; double-click the block and pick it again`); break; }
+        const given = [];
+        let okp = true;
+        for (const pd of entry.params ?? []) {
+          const raw = el.params?.[pd.name];
+          if (raw === undefined || String(raw).trim() === '') continue;
+          const v = parseValue(raw, '');
+          if (!Number.isFinite(v)) { bad(`parameter ${pd.name} is not a number`, raw); okp = false; break; }
+          given.push(`${pd.name}=${num(v)}`);
+        }
+        if (!okp) break;
+        use(...t);
+        libs.add(entry.file);
+        cards.push(`${ref(el, 'X')} ${t.join(' ')} ${entry.name}${given.length ? ` ${given.join(' ')}` : ''}`);
         break;
       }
 
@@ -496,6 +563,25 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
   const safeTitle = String(title).replace(/[\r\n]+/g, ' ').trim() || 'circuit';
   const libFiles = [...libs];
   const libNote = libFiles.map((f) => `* library file (added by the server when it runs): ${f}`);
-  const text = [safeTitle, ...libNote, ...cards, ...modelCards.values(), command, '.end', ''].join('\n');
+  if (pack) {
+    // Wrap the circuit as a .subckt definition; its pins are the Port parts, top to bottom then left to right.
+    if (!/^[A-Za-z][\w]{0,31}$/.test(String(pack.name))) errors.push('Subcircuit name: use letters, digits and _ only, starting with a letter (32 characters at most).');
+    const ports = [];
+    const portEls = elements.filter((e) => e.type === 'PortElm').map((e) => ({ e, p: terminalsOf(e)[0] }))
+      .sort((a, b) => a.p.y - b.p.y || a.p.x - b.p.x);
+    for (const { e } of portEls) {
+      const nm = nodes.nodeOfTerminal(e, 0);
+      if (nm === '0') errors.push('A Subcircuit Port cannot be named 0 or gnd; ground is shared with the outside circuit.');
+      else if (!ports.includes(nm)) ports.push(nm);
+    }
+    if (!ports.length) errors.push('Add at least one Subcircuit Port (Draw > Outputs and Labels) to mark the pins of the block.');
+    if (elements.some((e) => e.type === 'SubcktElm')) errors.push('Packing a circuit that contains Subcircuit blocks is not supported yet.');
+    if (gates.length) errors.push('Packing circuits with digital parts (gates, flip-flops) is not supported yet.');
+    if (libs.size) errors.push('Packing circuits that use library models is not supported yet (the block would need those files).');
+    if (directiveLines.length) errors.push('Remove SPICE Directive parts before packing; directives are not allowed inside a subcircuit.');
+    const bodyText = [`* ${String(title).replace(/[\r\n]+/g, ' ').trim() || 'circuit'} - packed by circuit-ui`, `.subckt ${pack.name} ${ports.join(' ')}`, ...cards, ...modelCards.values(), `.ends ${pack.name}`, ''].join('\n');
+    return { ok: errors.length === 0, text: bodyText, errors, warnings, refs, sources, libs: [], ports };
+  }
+  const text = [safeTitle, ...libNote, ...cards, ...modelCards.values(), ...directiveLines, command, '.end', ''].join('\n');
   return { ok, text, errors, warnings, refs, sources, libs: libFiles };
 }
