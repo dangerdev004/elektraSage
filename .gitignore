@@ -1,1 +1,14 @@
 .env
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+add/.env
+add/output/
+output/
+add/patch*/
+add/cascade_v1*/
+add/*_backup/
+*:Zone.Identifier
+add/agent/circuits/circuit_test.py
+agentic.zip

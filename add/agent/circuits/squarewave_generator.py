@@ -1,10 +1,12 @@
-from typing import Optional, Tuple
+"""Generate a Falstad (CircuitJS) 555-timer square-wave oscillator netlist (legacy format)."""
 
+import math
+from typing import NamedTuple, Optional, Tuple
 
-# Preferred timing-capacitor values (F), used to pick a capacitor for a
-# requested frequency when the caller supplies neither `capacitor` nor
-# `timing_resistor`. Chosen so the solved resistor tends to land in a
-# practical ~1 kOhm - 10 MOhm range across the corresponding frequency band.
+from ._parts import assemble, cap, dc_rail, gnd, index_of, out_marker, res, timer555, wire
+
+# Preferred timing-capacitor values (F), used to pick a capacitor for a requested frequency when the
+# caller supplies neither `capacitor` nor `timing_resistor`.
 _PREFERRED_CAPACITORS = [
     (10.0, 1e-6),      # < 10 Hz      -> 1 uF
     (1_000.0, 1e-7),   # < 1 kHz      -> 100 nF
@@ -14,60 +16,50 @@ _PREFERRED_CAPACITORS = [
 
 _MIN_PRACTICAL_R = 1_000.0        # 1 kOhm
 _MAX_PRACTICAL_R = 10_000_000.0   # 10 MOhm
+DEFAULT_R = 1_000_000.0           # 1 MOhm  (the reference circuit)
+DEFAULT_C = 3e-7                  # 300 nF
+DEFAULT_RF = 10_000.0             # 10 kOhm (the reference circuit)
+SWITCH_OHM = 1.0                  # Falstad's 555 output stage: 1 ohm to Vcc or to ground
 
 
-def square_wave_generator(
+class SquareDesign(NamedTuple):
+    supply_voltage: float
+    R: float            # timing resistor, Vcc to the capacitor node
+    Rf: float           # feedback resistor, 555 output to the capacitor node
+    C: float
+    t_high: float
+    t_low: float
+    f_hz: float
+    duty: float
+    notes: tuple
+
+
+def periods(r: float, rf: float, c: float) -> Tuple[float, float]:
+    """(t_high, t_low) of this circuit.
+
+    The capacitor node is fed from Vcc through R and from the 555 output through Rf, and the 555 flips
+    at 1/3 and 2/3 of Vcc. Output high: the node heads for Vcc through R || Rf, so
+        t_high = (R || Rf) C ln 2.
+    Output low: it heads for k Vcc with k = Rf / (R + Rf), again through R || Rf, so
+        t_low = (R || Rf) C ln((2/3 - k) / (1/3 - k)).
+    """
+    req = r * rf / (r + rf)
+    k = rf / (r + rf)
+    if k >= 1 / 3:
+        raise ValueError("the feedback resistor is so large next to the timing resistor that the capacitor "
+                         "can never discharge to the 555's lower threshold: the circuit would not oscillate "
+                         "(Rf must be well below R)")
+    return req * c * math.log(2.0), req * c * math.log((2 / 3 - k) / (1 / 3 - k))
+
+
+def design(
     supply_voltage: float = 10.0,
     timing_resistor: Optional[float] = None,
     capacitor: Optional[float] = None,
-    reset_pullup: float = 10_000.0,
+    reset_pullup: float = DEFAULT_RF,
     frequency: Optional[float] = None,
-) -> Tuple[str, str]:
-    """Generate a 555-timer square-wave (astable) oscillator as Falstad circuit text.
-
-    Layout matches the reference circuit: a single 555 Timer with `dis`
-    wired to the same node as `tr`/`th` (not through a separate discharge
-    resistor). Because of that, the timing capacitor charges through
-    `timing_resistor` but discharges almost instantly through the 555's
-    internal transistor, giving a sawtooth capacitor waveform and an
-    output that is fixed near-100% high with brief low pulses. Duty cycle
-    is NOT independently tunable in this topology — see the returned
-    note.
-
-    Component values are resolved with minimal-input-friendly defaults:
-    any of `timing_resistor`, `capacitor` you supply are used exactly as
-    given. For any of the two you leave as None, `frequency` (if given)
-    is used to derive it from f ~= 1.44 / (R * C); if neither is given
-    and `frequency` is given, a capacitor is picked from a preferred-value
-    table sized to the requested frequency and the resistor is solved
-    from it. If `frequency` is also None, both fall back to the baseline
-    defaults (1 MOhm, 300 nF) matching the reference circuit.
-
-    Args:
-        supply_voltage: Vcc rail, in volts. Defaults to 10 V.
-        timing_resistor: Charging resistor from Vcc to the RC node, in
-            ohms. If None, derived from `frequency` or defaulted.
-        capacitor: Timing capacitor from the RC node to ground, in
-            farads. If None, derived from `frequency` or defaulted.
-        reset_pullup: Resistor tying `rst` to Vcc, in ohms. Defaults to
-            10 kOhm.
-        frequency: Target oscillation frequency, in hertz. Only consulted
-            to fill in `timing_resistor` and/or `capacitor` when they are
-            left as None; ignored (aside from a consistency note) if both
-            are already given explicitly.
-
-    Returns:
-        A (circuit_text, note) tuple. `circuit_text` is Falstad circuit
-        text ready to load into circuitjs1. `note` always explains the
-        fixed near-100% duty cycle of this topology, and additionally
-        flags when a solved `timing_resistor` falls outside a practical
-        ~1 kOhm-10 MOhm range.
-
-    Raises:
-        ValueError: If `supply_voltage`, `reset_pullup`, an explicitly
-            given `timing_resistor`/`capacitor`, or `frequency` is not a
-            positive number.
-    """
+) -> SquareDesign:
+    """Resolve the component values and the resulting frequency and duty cycle."""
     if supply_voltage <= 0:
         raise ValueError(f"supply_voltage must be > 0, got {supply_voltage}")
     if reset_pullup <= 0:
@@ -78,147 +70,120 @@ def square_wave_generator(
         raise ValueError(f"capacitor must be > 0, got {capacitor}")
     if frequency is not None and frequency <= 0:
         raise ValueError(f"frequency must be > 0, got {frequency}")
-
-    # ── Baseline defaults (match the reference circuit exactly) ────────
-    DEFAULT_R = 1_000_000.0  # 1 MOhm
-    DEFAULT_C = 3e-7         # 300 nF
-
     notes = []
+    c = capacitor
+    r = timing_resistor
+    rf = reset_pullup
+    if frequency is not None:
+        if r is None:
+            r = DEFAULT_R
+        period = 1.0 / frequency
 
-    # ── Resolve timing_resistor / capacitor ─────────────────────────────
-    if timing_resistor is not None and capacitor is not None:
-        # Both given explicitly: used as-is. If frequency was also given,
-        # just note the mismatch rather than overriding either value.
-        if frequency is not None:
-            actual_f = 1.44 / (timing_resistor * capacitor)
-            if abs(actual_f - frequency) / frequency > 0.05:
-                notes.append(
-                    f"Note: with the given timing_resistor and capacitor the "
-                    f"actual frequency is ~{actual_f:.4g} Hz, not the "
-                    f"requested {frequency:.4g} Hz (both explicit values were "
-                    f"kept as given)."
-                )
-        resolved_r = timing_resistor
-        resolved_c = capacitor
-    elif timing_resistor is not None:
-        # R given, solve C from frequency (or default C if no frequency).
-        resolved_r = timing_resistor
-        resolved_c = (1.44 / (frequency * resolved_r)) if frequency is not None else DEFAULT_C
-    elif capacitor is not None:
-        # C given, solve R from frequency (or default R if no frequency).
-        resolved_c = capacitor
-        resolved_r = (1.44 / (frequency * resolved_c)) if frequency is not None else DEFAULT_R
-    elif frequency is not None:
-        # Neither given: pick C from the preferred-value table, solve R.
-        for threshold, cap_value in _PREFERRED_CAPACITORS:
-            if frequency < threshold:
-                resolved_c = cap_value
-                break
-        resolved_r = 1.44 / (frequency * resolved_c)
+        def solve(cc):
+            lo, hi = 1e-3 * r, r / 3.0 * (1 - 1e-9)
+            if sum(periods(r, hi, cc)) < period or sum(periods(r, lo, cc)) > period:
+                return None
+            for _ in range(200):
+                mid = math.sqrt(lo * hi)
+                if sum(periods(r, mid, cc)) < period:
+                    lo = mid
+                else:
+                    hi = mid
+            return math.sqrt(lo * hi)
+
+        if c is not None:
+            cands = [c]
+        else:
+            cands = [m * 10.0 ** e for e in range(-12, -3) for m in (1.0, 3.3)]
+        best = None
+        for cc in cands:
+            sol = solve(cc)
+            if sol is None or (c is None and not 100.0 <= sol <= r / 10.0):
+                continue
+            score = abs(math.log10(sol / 1e4))           # prefer a feedback resistor near 10 kohm
+            if best is None or score < best[0]:
+                best = (score, cc, sol)
+        if best is None:
+            raise ValueError(f"{frequency:g} Hz cannot be reached with R = {r:g} ohm"
+                             f"{'' if c is None else f' and C = {c:g} F'} in this circuit; change the "
+                             "capacitor or the timing resistor")
+        c, rf = best[1], best[2]
+        if abs(rf - reset_pullup) > 1e-9 * rf and reset_pullup != DEFAULT_RF:
+            notes.append(f"the feedback resistor was re-solved to {rf:.4g} ohm to hit {frequency:g} Hz "
+                         "(the frequency is set by it, not by the timing resistor)")
     else:
-        # Nothing given at all: baseline defaults.
-        resolved_r = DEFAULT_R
-        resolved_c = DEFAULT_C
+        c = DEFAULT_C if c is None else c
+        r = DEFAULT_R if r is None else r
+    if r < _MIN_PRACTICAL_R or r > _MAX_PRACTICAL_R:
+        notes.append(f"the timing resistor ({r:.4g} ohm) is outside the practical 1 kohm to 10 Mohm range")
+    th, tl = periods(r, rf, c)
+    return SquareDesign(supply_voltage, r, rf, c, th, tl, 1.0 / (th + tl), th / (th + tl), tuple(notes))
 
-    if resolved_r < _MIN_PRACTICAL_R or resolved_r > _MAX_PRACTICAL_R:
-        notes.append(
-            f"Warning: solved timing_resistor ({resolved_r:.4g} ohm) falls "
-            f"outside the practical ~{_MIN_PRACTICAL_R:.0f} ohm - "
-            f"{_MAX_PRACTICAL_R:.0f} ohm range; consider fixing capacitor "
-            f"or frequency to a different value."
-        )
 
-    notes.append(
-        "Note: dis is tied to the tr/th node (no separate discharge "
-        "resistor), so the capacitor discharges almost instantly through "
-        "the 555's internal transistor. Duty cycle is fixed near-100% "
-        "high with brief low pulses and is not independently tunable in "
-        "this topology."
-    )
+def square_wave_generator(
+    supply_voltage: float = 10.0,
+    timing_resistor: Optional[float] = None,
+    capacitor: Optional[float] = None,
+    reset_pullup: float = DEFAULT_RF,
+    frequency: Optional[float] = None,
+) -> Tuple[str, str]:
+    """Generate a Falstad-format 555-timer square-wave oscillator (0 V to the supply, about 50% duty).
 
-    # ── Layout constants (from the reference circuit, all fixed) ───────
-    lines = [
-        '<cir f="1" ts="0.000005" ic="5.023272298708815" cb="64" pb="50" vr="7" mts="5e-11">',
-        '  <w x="112 192 112 224" f="0"/>',
-        '  <w x="112 224 176 224" f="0"/>',
-        f'  <c x="112 224 112 288" f="0" c="{resolved_c}" iv="0.001" sr="0" vd="6.1877519531796015"/>',
-        '  <g x="112 288 112 304" f="0"/>',
-        f'  <r x="112 192 112 64" f="0" r="{resolved_r}"/>',
-        '  <w x="112 64 240 64" f="0"/>',
-        f'  <R x="112 64 80 64" f="0" wf="0" maxv="{supply_voltage}"/>',
-        '  <O x="352 160 416 160" f="0" sc="0"/>',
-        '  <Timer x="176 96 192 96" f="6" v5="9.999618813313987"/>',
-        '  <w x="240 64 304 64" f="0"/>',
-        '  <w x="304 64 304 128" f="0"/>',
-        '  <w x="352 160 304 160" f="0"/>',
-        '  <w x="352 160 352 32" f="0"/>',
-        f'  <r x="352 32 160 32" f="0" r="{reset_pullup}"/>',
-        '  <w x="160 32 160 192" f="0"/>',
-        '  <w x="112 192 160 192" f="0"/>',
-        '  <w x="160 192 176 192" f="0"/>',
-        '  <g x="272 256 272 272" f="0"/>',
-        '</cir>',
+    A single 555 whose threshold/trigger pins sit on a capacitor node that is fed from Vcc through the
+    timing resistor and ALSO from the 555's own output through a feedback resistor (the discharge pin is
+    not used). With the output high the capacitor charges toward Vcc, with it low it discharges through the
+    feedback resistor, so the frequency is set mainly by the feedback resistor:
+        f = 1 / (t_high + t_low),  t_high = (R || Rf) C ln 2,  t_low = (R || Rf) C ln((2/3 - k)/(1/3 - k)),
+        k = Rf / (R + Rf).
+    With the defaults (R = 1 Mohm, Rf = 10 kohm, C = 300 nF) this is about 240 Hz at about 50% duty.
+    `reset_pullup` is that feedback resistor (the name comes from the original export). Give `frequency` to
+    have the feedback resistor solved for it. This circuit generates its own signal and has no signal input,
+    so it can only be the FIRST stage of a cascade.
+
+    Args:
+        supply_voltage: Vcc rail, in volts. Defaults to 10 V.
+        timing_resistor: Resistor from Vcc to the capacitor node, in ohms. Default 1 Mohm.
+        capacitor: Timing capacitor from that node to ground, in farads. Default 300 nF (or chosen from
+            `frequency`).
+        reset_pullup: Feedback resistor from the 555 output to the capacitor node, in ohms. Default 10 kohm.
+        frequency: Target oscillation frequency in hertz; the feedback resistor is solved for it.
+
+    Returns:
+        A (circuit_text, note) tuple. `circuit_text` is Falstad circuit text ready to load into circuitjs1;
+        `note` states the frequency and duty cycle the circuit will have.
+
+    Raises:
+        ValueError: If an argument is not positive, the frequency cannot be reached, or the feedback
+            resistor is too large for the circuit to oscillate.
+    """
+    d = design(supply_voltage, timing_resistor, capacitor, reset_pullup, frequency)
+    el = [
+        wire(112, 192, 112, 224),
+        wire(112, 224, 176, 224),
+        cap(112, 224, 112, 288, d.C, d.supply_voltage / 3.0),
+        gnd(112, 288, 112, 304),
+        res(112, 192, 112, 64, d.R),
+        wire(112, 64, 240, 64),
+        dc_rail(112, 64, 80, 64, d.supply_voltage),
+        out_marker(352, 160, 416, 160),
+        timer555(176, 96, 192, 96, 6, d.supply_voltage),
+        wire(240, 64, 304, 64),
+        wire(304, 64, 304, 128),
+        wire(352, 160, 304, 160),
+        wire(352, 160, 352, 32),
+        res(352, 32, 160, 32, d.Rf),
+        wire(160, 32, 160, 192),
+        wire(112, 192, 160, 192),
+        wire(160, 192, 176, 192),
+        gnd(272, 256, 272, 272),
     ]
+    note = (f"Frequency about {d.f_hz:.4g} Hz at about {d.duty:.1%} duty (high {d.t_high * 1e3:.4g} ms, low "
+            f"{d.t_low * 1e3:.4g} ms); the output swings 0 V to {d.supply_voltage:g} V. The frequency is set mainly "
+            f"by the feedback resistor ({d.Rf:.4g} ohm) and the capacitor, not by the timing resistor.")
+    if d.notes:
+        note += " " + "; ".join(n[0].upper() + n[1:] for n in d.notes) + "."
+    step = min(5e-6, 1.0 / (400 * d.f_hz))
+    return assemble(el, step, [(index_of(el, "O"), 2 * d.supply_voltage, 64)]), note
 
-    circuit_text = "\n".join(lines) + "\n"
-    note = " ".join(notes)
 
-    return circuit_text, note
-
-
-if __name__ == "__main__":
-    import argparse
-    import sys
-
-    parser = argparse.ArgumentParser(
-        description="Generate a 555-timer square-wave oscillator as Falstad circuit text."
-    )
-    parser.add_argument(
-        "--supply-voltage", type=float, default=10.0,
-        help="Vcc rail, in volts (default: 10)",
-    )
-    parser.add_argument(
-        "--timing-resistor", type=float, default=None,
-        help="Charging resistor, in ohms. Derived from --frequency if omitted.",
-    )
-    parser.add_argument(
-        "--capacitor", type=float, default=None,
-        help="Timing capacitor, in farads. Derived from --frequency if omitted.",
-    )
-    parser.add_argument(
-        "--reset-pullup", type=float, default=10_000.0,
-        help="Resistor tying rst to Vcc, in ohms (default: 10000)",
-    )
-    parser.add_argument(
-        "--frequency", type=float, default=None,
-        help="Target oscillation frequency, in hertz. Used to fill in "
-             "--timing-resistor/--capacitor when they're omitted.",
-    )
-    parser.add_argument(
-        "-o", "--output", type=str, default=None,
-        help="Write the circuit text to this file instead of stdout.",
-    )
-
-    args = parser.parse_args()
-
-    try:
-        circuit, note = square_wave_generator(
-            supply_voltage=args.supply_voltage,
-            timing_resistor=args.timing_resistor,
-            capacitor=args.capacitor,
-            reset_pullup=args.reset_pullup,
-            frequency=args.frequency,
-        )
-    except ValueError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    print("=== 555 Square Wave Generator ===", file=sys.stderr)
-    print(note, file=sys.stderr)
-
-    if args.output:
-        with open(args.output, "w") as f:
-            f.write(circuit)
-        print(f"Circuit written to {args.output}", file=sys.stderr)
-    else:
-        print(circuit)
+calculate = design   # public: used by the cascade's oscillator model
