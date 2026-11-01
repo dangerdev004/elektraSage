@@ -259,15 +259,17 @@ def verify(per_stage: list[list[Element]], combined: list[Element],
                 problems.append(f"stage {k + 1}: a net was split in the combined circuit at {p}")
             owners.setdefault(n_comb, set()).add((k, n_alone))
     allowed = set()
+    per_net: dict[int, int] = {}
     for j, (a, b) in enumerate(joins):
         if all_nets.get(a) != all_nets.get(b):
             problems.append(f"join {j + 1}: {a} and {b} are not connected")
         allowed.add(all_nets.get(a))
+        per_net[all_nets.get(a)] = per_net.get(all_nets.get(a), 0) + 1
     for n_comb, members in owners.items():
         stages_hit = {k for k, _ in members}
         if len(members) > 1 and n_comb not in allowed:
             problems.append(f"unintended connection between stages {sorted(s + 1 for s in stages_hit)} "
                             f"(net {n_comb})")
-        if n_comb in allowed and len(members) != 2:
-            problems.append(f"join net has {len(members)} member nets, expected 2")
+        if n_comb in allowed and len(members) != per_net[n_comb] + 1:   # k joins tie k + 1 nets together
+            problems.append(f"join net has {len(members)} member nets, expected {per_net[n_comb] + 1}")
     return problems

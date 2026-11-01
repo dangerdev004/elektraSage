@@ -794,8 +794,10 @@ def test_multi_stage_branches_build_and_stay_clean():
 
 
 def test_parallel_refusals():
-    with pytest.raises(ValueError, match="exactly TWO"):
+    with pytest.raises(ValueError, match="from 2 to 8 paths"):
         parallel_sum([[LP1K]])
+    with pytest.raises(ValueError, match="from 2 to 8 paths"):
+        parallel_sum([[LP1K]] * 9)
     with pytest.raises(ValueError, match="takes no signal input"):
         parallel_sum([[_S("rc_phaseshift", frequency_hz=1000)], [HP100]])
     with pytest.raises(ValueError, match="digital"):

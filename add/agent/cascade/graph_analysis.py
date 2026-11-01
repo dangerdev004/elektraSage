@@ -96,7 +96,9 @@ def analyse_parallel(par: Parallel, names: list[list[str]]) -> Analysis:
             peak = drv.amp * max(vm[j] for j in idx)
         else:
             peak = _peak(drv, freqs, curves[node])
-        where = {0: "branch 1", 1: "branch 2", 2: "the combiner"}.get(par.part_of[i], "the circuit")
+        part = par.part_of[i]
+        where = ("the combiner" if part == len(par.comps) else f"branch {part + 1}" if 0 <= part < len(par.comps)
+                 else "the circuit")
         txt = f"op-amp in {where}: peak output {fmt(peak, 'V')} for this source"
         if lim:
             txt += f" vs +/-{fmt(lim, 'V')} limit"

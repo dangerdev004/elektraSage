@@ -23,6 +23,7 @@ from .analysis import Analysis, comparator_stage, depth_text, _stage_metrics, an
 from .compose import Composite, Stage, compose
 from .graph import compose_parallel
 from .graph_analysis import analyse_parallel
+from .combiners import MAX_PATHS, difference_combiner, sum_combiner
 from .dump import Netlist, nets, terminals
 from .ports import is_signal_source, ports_for, waveform
 
@@ -530,7 +531,7 @@ _PRETTY = {
     "rc_lowpass": "RC low-pass filter", "rc_highpass": "RC high-pass filter",
     "rl_lowpass": "RL low-pass filter", "rl_highpass": "RL high-pass filter",
     "inverting_amp": "inverting amplifier", "non_inverting_amp": "non-inverting amplifier",
-    "summing_amplifier": "summing amplifier", "voltage_follower": "voltage follower",
+    "summing_amplifier": "summing amplifier", "difference_amplifier": "difference amplifier", "voltage_follower": "voltage follower",
     "sallen_key_lowpass": "Sallen-Key low-pass filter", "sallen_key_highpass": "Sallen-Key high-pass filter",
     "butterworth_lowpass": "Butterworth low-pass filter", "butterworth_highpass": "Butterworth high-pass filter",
     "allpass_filter": "all-pass filter", "differential_amplifier": "differential amplifier",
@@ -789,33 +790,70 @@ def _build(stages: list[dict], source_amp: float | None = None):
     return built, comp, analysis
 
 
-# ---- parallel branches summed by a combiner ---------------------------------------------
+# ---- parallel branches joined by a combiner ----------------------------------------------
 
 SUMMER = "summing_amplifier"
-_SUMMER_SOURCE_ARGS = {"input1_frequency_hz": 1000.0, "input2_frequency_hz": 100.0}   # sources are dropped
+DIFFERENCE = "difference_amplifier"
+_NUMBER_WORDS = {2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight"}
 
 
-def _spec_branches(branches) -> list[list[dict]]:
+def _spec_branches(branches, difference: bool = False) -> list[list[dict]]:
     if isinstance(branches, str):
         try:
             branches = json.loads(branches)
         except ValueError:
-            raise ValueError("branches must be a list of two lists of {'circuit', 'args'}") from None
-    if (not isinstance(branches, list) or len(branches) != 2
-            or not all(isinstance(b, list) and b for b in branches)):
-        raise ValueError("branches must be a list of exactly TWO non-empty lists of "
-                         "{'circuit': name, 'args': {...}}; for one path use `cascade`")
+            raise ValueError("branches must be a list of lists of {'circuit', 'args'}") from None
+    if not isinstance(branches, list) or not all(isinstance(b, list) and b for b in branches):
+        raise ValueError("branches must be a list of non-empty lists of {'circuit': name, 'args': {...}}; "
+                         "for one path use `cascade`")
+    if difference and len(branches) != 2:
+        raise ValueError("a difference needs exactly TWO paths (path 1 minus path 2); for more paths use "
+                         "`parallel_sum`")
+    if not 2 <= len(branches) <= MAX_PATHS:
+        raise ValueError(f"branches must hold from 2 to {MAX_PATHS} paths, got {len(branches)}; "
+                         "for one path use `cascade`")
     return branches
 
 
-def _build_parallel(branches: list[list[dict]], gain: float, source_amp: float | None = None):
-    gens = _generators()
-    if SUMMER not in gens:
-        raise ValueError(f"the combiner circuit '{SUMMER}' is not registered")
+def _spec_weights(weights, n: int):
+    if weights is None:
+        return None
+    if isinstance(weights, str):
+        try:
+            weights = json.loads(weights)
+        except ValueError:
+            raise ValueError("weights must be a list of numbers, one per path") from None
+    if not isinstance(weights, list) or len(weights) != n:
+        raise ValueError(f"weights must be a list with one number per path ({n} paths)")
+    if all(isinstance(w, (int, float)) and not isinstance(w, bool) and w == weights[0] for w in weights) \
+            and weights[0] == 1:
+        return None                                   # all ones is the plain sum
+    return [w for w in weights]
+
+
+def _combiner_factory(difference: bool, n: int, gain: float, weights):
+    """Function of the top-to-bottom branch order returning the combiner whose k-th input takes branch order[k]."""
+    def make(order: list[int]) -> Stage:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            if difference:
+                text = difference_combiner(gain, positive_on_top=(order[0] == 0))
+                name = DIFFERENCE
+            else:
+                text = sum_combiner(n, gain, None if weights is None else [weights[b] for b in order])
+                name = SUMMER
+        nl = dump.parse(text)
+        return Stage(name, {"gain_v_per_v": gain}, nl, ports_for(name, nl), [str(w.message) for w in caught], None)
+    return make
+
+
+def _build_parallel(branches: list[list[dict]], gain: float, source_amp: float | None = None,
+                    weights=None, difference: bool = False):
+    n = len(branches)
     built = [_make_stages(b, f"branch {i + 1} stage") for i, b in enumerate(branches)]
-    summer_spec = {"circuit": SUMMER, "args": {"gain_v_per_v": gain, **_SUMMER_SOURCE_ARGS}}
-    summer = _make_stages([summer_spec], "combiner")[0]
-    par = compose_parallel(built, summer)
+    make = _combiner_factory(difference, n, gain, weights)
+    summer = make(list(range(n)))
+    par = compose_parallel(built, make)
     _set_source_amp(par.netlist, source_amp)
     if par.problems:
         raise ValueError("internal structural check failed (this is a bug, not a user error): "
@@ -838,7 +876,19 @@ def _build_parallel(branches: list[list[dict]], gain: float, source_amp: float |
     return built, summer, par, analysis
 
 
-def _find_parallel_buffer_fix(branches, gain, analysis, built_all=None):
+def _tool_name(difference: bool) -> str:
+    return "parallel_difference" if difference else "parallel_sum"
+
+
+def _call_args(branches, gain, weights, **extra) -> dict:
+    args = {"branches": branches, "gain_v_per_v": gain}
+    if weights is not None:
+        args["weights"] = weights
+    args.update(extra)
+    return args
+
+
+def _find_parallel_buffer_fix(branches, gain, analysis, built_all=None, weights=None, difference=False):
     """Append a buffer to every branch the combiner loads; keep it only if the rebuilt circuit
     really has no loading left. Returns (buffer name, [branch numbers], new branches, analysis)."""
     fixers = _fixers()
@@ -850,7 +900,7 @@ def _find_parallel_buffer_fix(branches, gain, analysis, built_all=None):
     for k in analysis.loaded:
         trial[k - 1] = [*trial[k - 1], {"circuit": name, "args": dict(bargs)}]
     try:
-        _, _, _, a2 = _build_parallel(trial, gain, analysis.source_amp)
+        _, _, _, a2 = _build_parallel(trial, gain, analysis.source_amp, weights, difference)
     except ValueError:
         return None
     if not a2.supported or a2.loaded:
@@ -862,13 +912,28 @@ def _branch_phrase(specs: list[dict]) -> str:
     return " then ".join(f"{_pretty(t['circuit'])}{_args_txt(t.get('args') or {})}" for t in specs)
 
 
-def _render_parallel_reply(branches, gain, built, summer, par, analysis, fixout: dict | None = None) -> str:
-    out = ["I've split the input into two parallel paths and summed them with a "
-           f"{_pretty(SUMMER)} (gain {_fnum(gain)}):",
-           f"- **Path 1:** {_branch_phrase(branches[0])}",
-           f"- **Path 2:** {_branch_phrase(branches[1])}",
-           "Path 1's source drives both paths. This summing amplifier is inverting, so the output is "
-           "the negative of the sum."]
+def _weights_phrase(weights) -> str:
+    return "" if weights is None else " with path weights " + ", ".join(_fnum(w) for w in weights)
+
+
+def _render_parallel_reply(branches, gain, built, summer, par, analysis, fixout: dict | None = None,
+                           weights=None, difference: bool = False) -> str:
+    n = len(branches)
+    tool = _tool_name(difference)
+    if difference:
+        out = ["I've split the input into two parallel paths and subtracted them with a "
+               f"{_pretty(DIFFERENCE)} (gain {_fnum(gain)}):"]
+    else:
+        out = [f"I've split the input into {_NUMBER_WORDS[n]} parallel paths and summed them with a "
+               f"{_pretty(SUMMER)} (gain {_fnum(gain)}{_weights_phrase(weights)}):"]
+    out += [f"- **Path {i + 1}:** {_branch_phrase(b)}" for i, b in enumerate(branches)]
+    drives = "both paths" if n == 2 else "every path"
+    if difference:
+        out.append(f"Path 1's source drives {drives}. The output is the gain times (path 1 minus path 2), "
+                   "so a signal that appears equally in both paths cancels.")
+    else:
+        out.append(f"Path 1's source drives {drives}. This summing amplifier is inverting, so the output is "
+                   "the negative of the" + (" weighted" if weights is not None else "") + " sum.")
     notes = [f"One thing to know ({_pretty(s_.name)}): {w}." for br in built for s_ in br
              for w in s_.warnings] + [f"One thing to know ({_pretty(summer.name)}): {w}."
                                       for w in summer.warnings if "estimated output peak" not in w]
@@ -881,15 +946,16 @@ def _render_parallel_reply(branches, gain, built, summer, par, analysis, fixout:
             out.append("Overall its gain changes steadily with frequency, so there is no single gain or "
                        "cutoff to quote.")
         else:
-            txt = (f"Overall the sum is {_a(analysis.shape)} response with a {_gain_word(analysis.shape)} of about "
-                   f"{analysis.gain:.3g}")
+            txt = (f"Overall the {'difference' if difference else 'sum'} is {_a(analysis.shape)} response with a "
+                   f"{_gain_word(analysis.shape)} of about {analysis.gain:.3g}")
             txt += _tail(analysis)
             out.append(txt + ".")
         if analysis.flags:
             out += ["", "**Worth knowing:**"] + ["- " + f for f in analysis.flags]
         else:
             out.append("I found nothing worth flagging: no loading or clipping.")
-        bfix = _find_parallel_buffer_fix(branches, gain, analysis, [s_ for b in built for s_ in b] + [summer])
+        bfix = _find_parallel_buffer_fix(branches, gain, analysis, [s_ for b in built for s_ in b] + [summer],
+                                         weights, difference)
         if bfix:
             name, which, trial, a2 = bfix
             where = _join([f"path {k}" for k in which])
@@ -902,29 +968,33 @@ def _render_parallel_reply(branches, gain, built, summer, par, analysis, fixout:
                     f"{where}. The loading goes away" + _gives(bits, "circuit") + "."]
             out.append("After that change, " + ("code still reports: " + " ".join(a2.flags)
                                                  if a2.flags else "nothing else is flagged."))
+            joiner = (f"subtracted with a difference amplifier (gain {_fnum(gain)})" if difference
+                      else f"summed with a summing amplifier (gain {_fnum(gain)}{_weights_phrase(weights)})")
             out.append("To build it, ask for: " + "; ".join(
                 f"path {i + 1}: {_branch_phrase(t)}" for i, t in enumerate(trial))
-                + f"; summed with a summing amplifier (gain {_fnum(gain)}). "
-                "Or just say \"apply the buffer fix\".")
+                + f"; {joiner}. Or just say \"apply the buffer fix\".")
             if fixout is not None:
-                fixout["call"] = ("parallel_sum", {"branches": trial, "gain_v_per_v": gain})
+                fixout["call"] = (tool, _call_args(trial, gain, weights))
         elif analysis.loaded:
             out += ["", "There's no automatic fix for this loading with the circuits available."]
         if not analysis.loaded:
-            hf = _find_headroom_fix(analysis, lambda amp: _build_parallel(branches, gain, amp)[3])
+            hf = _find_headroom_fix(analysis, lambda amp: _build_parallel(branches, gain, amp, weights,
+                                                                          difference)[3])
             if hf:
                 out += _headroom_text(analysis, hf[0], hf[1])
                 if fixout is not None:
-                    fixout["call"] = ("parallel_sum", {"branches": branches, "gain_v_per_v": gain,
-                                                       "source_amplitude": hf[0]})
+                    fixout["call"] = (tool, _call_args(branches, gain, weights, source_amplitude=hf[0]))
     out += ([""] + notes) if notes else []
     out += ["", "_Not modelled: op-amp bandwidth and slew, tolerances. Output scopes were rescaled "
             "from the computed peaks. Written by code, not by the language model._"]
     return "\n".join(out)
 
 
-def _parallel_fact_sheet(branches, built, summer, par, analysis) -> str:
-    out = ["Built two parallel branches summed by a summing amplifier; branch 1's source drives both."]
+def _parallel_fact_sheet(branches, built, summer, par, analysis, difference: bool = False) -> str:
+    n = len(branches)
+    what = "subtracted by a difference amplifier" if difference else "summed by a summing amplifier"
+    out = [f"Built {_NUMBER_WORDS[n]} parallel branches {what}; branch 1's source drives "
+           + ("both." if n == 2 else "every branch.")]
     for i, (spec, b) in enumerate(zip(branches, built), 1):
         out.append(f"Branch {i}: " + " -> ".join(f"{s.name}({', '.join(f'{k}={v}' for k, v in s.args.items())})"
                                                     for s in b))
@@ -934,34 +1004,45 @@ def _parallel_fact_sheet(branches, built, summer, par, analysis) -> str:
 
 
 def _parallel_impl(branches: list[list[dict]], gain_v_per_v: float = 1.0,
-                   auto_buffer: bool = True, source_amplitude: float | None = None) -> tuple[str, str]:
+                   auto_buffer: bool = True, source_amplitude: float | None = None,
+                   weights=None, difference: bool = False) -> tuple[str, str]:
     """PLACEHOLDER - the real docstring is built at import time (see below)."""
-    branches = _spec_branches(branches)
-    built, summer, par, analysis = _build_parallel(branches, gain_v_per_v, source_amplitude)
+    branches = _spec_branches(branches, difference)
+    weights = None if difference else _spec_weights(weights, len(branches))
+    tool = _tool_name(difference)
+    built, summer, par, analysis = _build_parallel(branches, gain_v_per_v, source_amplitude, weights, difference)
     preface, alt = "", None
     if auto_buffer and _severe(analysis):
         bfix = _find_parallel_buffer_fix(branches, gain_v_per_v, analysis,
-                                         [s_ for b in built for s_ in b] + [summer])
+                                         [s_ for b in built for s_ in b] + [summer], weights, difference)
         if bfix:
             name, which, trial, _a2 = bfix
             where = _join([f"path {k}" for k in which])
             preface = (f"As asked, the combiner would load the paths badly: {' '.join(f for f in analysis.flags if f.startswith("Loading")) or "loading between stages."} So I "
                        f"built it with a {_pretty(name)} at the end of {where}. For the circuit exactly as "
                        "asked, say \"build it without the buffers\".\n\n")
-            alt = ("parallel_sum", {"branches": branches, "gain_v_per_v": gain_v_per_v, "auto_buffer": False,
-                                          "source_amplitude": source_amplitude})
+            alt = (tool, _call_args(branches, gain_v_per_v, weights, auto_buffer=False,
+                                    source_amplitude=source_amplitude))
             branches = trial
-            built, summer, par, analysis = _build_parallel(branches, gain_v_per_v, source_amplitude)
-    sheet = FactSheet(_parallel_fact_sheet(branches, built, summer, par, analysis))
+            built, summer, par, analysis = _build_parallel(branches, gain_v_per_v, source_amplitude, weights,
+                                                           difference)
+    sheet = FactSheet(_parallel_fact_sheet(branches, built, summer, par, analysis, difference))
     sheet.alt_call = alt
     try:
         fx: dict = {}
-        sheet.reply = preface + _render_parallel_reply(branches, gain_v_per_v, built, summer, par, analysis, fx)
+        sheet.reply = preface + _render_parallel_reply(branches, gain_v_per_v, built, summer, par, analysis, fx,
+                                                       weights, difference)
         sheet.fix_call = fx.get("call")
     except Exception as exc:                    # the reply is advisory: never lose the circuit
-        sheet.reply = ("I've built the two parallel paths and the summing amplifier. The wiring was "
+        sheet.reply = (f"I've built the {_NUMBER_WORDS[len(branches)]} parallel paths and the "
+                       f"{'difference' if difference else 'summing'} amplifier. The wiring was "
                        f"checked, but I couldn't write the detailed summary ({type(exc).__name__}).")
     return par.netlist.to_text(), sheet
+
+
+def _difference_impl(branches: list[list[dict]], gain_v_per_v: float = 1.0, auto_buffer: bool = True,
+                     source_amplitude: float | None = None) -> tuple[str, str]:
+    return _parallel_impl(branches, gain_v_per_v, auto_buffer, source_amplitude, None, True)
 
 
 def cascade(stages: list[dict], source_amplitude: float | None = None) -> tuple[str, str]:
@@ -970,14 +1051,20 @@ def cascade(stages: list[dict], source_amplitude: float | None = None) -> tuple[
 
 
 def parallel_sum(branches: list[list[dict]], gain_v_per_v: float = 1.0,
-                 source_amplitude: float | None = None) -> tuple[str, str]:
+                 source_amplitude: float | None = None, weights: list[float] | None = None) -> tuple[str, str]:
     """PLACEHOLDER - the real docstring is built at import time (see below)."""
-    return _parallel_impl(branches, gain_v_per_v, True, source_amplitude)
+    return _parallel_impl(branches, gain_v_per_v, True, source_amplitude, weights)
+
+
+def parallel_difference(branches: list[list[dict]], gain_v_per_v: float = 1.0,
+                        source_amplitude: float | None = None) -> tuple[str, str]:
+    """PLACEHOLDER - the real docstring is built at import time (see below)."""
+    return _difference_impl(branches, gain_v_per_v, True, source_amplitude)
 
 
 # The model never sees `auto_buffer`: only code (the "build it without the buffers" follow-up)
 # may switch the automatic buffering off, so it cannot be turned off by a stray model argument.
-INTERNAL = {"cascade": _cascade_impl, "parallel_sum": _parallel_impl}
+INTERNAL = {"cascade": _cascade_impl, "parallel_sum": _parallel_impl, "parallel_difference": _difference_impl}
 
 
 def _signature_line(fn) -> str:
@@ -1032,31 +1119,58 @@ def _finish_docstring() -> None:
     """
 
 
-    parallel_sum.__doc__ = f"""Split the input into TWO parallel paths and add (sum) their outputs with a summing amplifier.
+    parallel_sum.__doc__ = f"""Split the input into TWO OR MORE parallel paths and add (sum) their outputs with a summing amplifier.
 
-    Use this (instead of `cascade`) when the user wants two signal paths in parallel that are
-    then summed/added/mixed, e.g. "a low-pass and a high-pass in parallel, summed". Each path
-    is one or more circuits in order (a path can itself be a small chain). Path 1's source
-    drives both paths, so source arguments (input amplitude/frequency) of later circuits have
-    no effect: leave them at their defaults. Generators produce the circuits, not you; extract
-    each circuit's parameters exactly as for the single circuit and never invent values; ask
-    for missing REQUIRED ones first. Do not write your own summary: the reply is written by code.
+    Use this (instead of `cascade`) when the user wants signal paths in parallel that are then
+    summed/added/mixed, e.g. "a low-pass and a high-pass in parallel, summed" or "split the
+    signal into low, mid and high bands and add them back". Each path is one or more circuits in
+    order (a path can itself be a small chain). Path 1's source drives every path, so source
+    arguments (input amplitude/frequency) of later circuits have no effect: leave them at their
+    defaults. Generators produce the circuits, not you; extract each circuit's parameters exactly
+    as for the single circuit and never invent values; ask for missing REQUIRED ones first. Do
+    not write your own summary: the reply is written by code.
 
     Every circuit in a path must take an input (oscillators and 555 timers cannot be inside a
     path). Digital circuits and circuits from different file formats cannot be used yet.
-    Exactly two paths are supported.
+    From 2 to {MAX_PATHS} paths are supported. The summing amplifier inverts, so the output is the
+    negative of the sum. Use `weights` only when the user wants paths mixed in different
+    proportions (e.g. "twice as much of the low-pass").
 
     Available circuits and their arguments:
       {names}
 
     Args:
-        branches: Exactly two lists. Each is an ordered list of
+        branches: A list of 2 to {MAX_PATHS} paths. Each path is an ordered list of
             {{"circuit": "<circuit tool name>", "args": {{<that circuit's own arguments>}}}},
             e.g. [[{{"circuit": "rc_lowpass", "args": {{"cutoff_frequency": 1000}}}}],
             [{{"circuit": "rc_highpass", "args": {{"cutoff_frequency": 100}}}}]].
         gain_v_per_v: Gain of the summing amplifier (default 1).
-        source_amplitude: Peak volts of the source that drives both paths. Leave it out unless the
+        source_amplitude: Peak volts of the source that drives every path. Leave it out unless the
             user states one; code lowers it itself when an op-amp would run out of headroom.
+        weights: Optional list with one positive number per path, the share of each path in the
+            sum (default: all equal to 1). The gain of path k is gain_v_per_v x weights[k].
+
+    Returns:
+        The combined circuit text plus a fact sheet about the result.
+    """
+
+    parallel_difference.__doc__ = f"""Split the input into TWO parallel paths and SUBTRACT them: output = gain x (path 1 - path 2).
+
+    Use this when the user wants the difference of two paths, e.g. "subtract the low-pass output
+    from the original signal" or "path A minus path B". Paths are described exactly as for
+    `parallel_sum` (ordered lists of circuits; path 1's source drives both paths; the reply is
+    written by code, so do not write a summary of your own). Exactly two paths. For three or more
+    paths, or for adding, use `parallel_sum`.
+
+    Available circuits and their arguments:
+      {names}
+
+    Args:
+        branches: Exactly two paths. Each is an ordered list of
+            {{"circuit": "<circuit tool name>", "args": {{<that circuit's own arguments>}}}}.
+        gain_v_per_v: Gain applied to the difference (default 1).
+        source_amplitude: Peak volts of the source that drives both paths. Leave it out unless the
+            user states one.
 
     Returns:
         The combined circuit text plus a fact sheet about the result.
