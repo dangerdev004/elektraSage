@@ -1,5 +1,7 @@
 from typing import Optional, Tuple
 
+from ._parts import (assemble, cap, dc_rail, gnd, index_of, logic_input, out_marker, res, timer555, wire)
+
 
 # Fixed trigger network taken from the exported Falstad circuit (100 ohm +
 # 10 uF RC differentiator feeding a pushbutton/logic input). Not tunable.
@@ -138,39 +140,30 @@ def monostable_555_generator(
         "the one-shot."
     )
 
-    # ── Layout constants (from the reference circuit, all fixed) ───────
-    lines = [
-        '<cir f="1" ts="0.000005" ic="10.20027730826997" cb="56" pb="50" vr="5" mts="5e-11">',
-        '  <Timer x="208 144 320 144" f="4"/>',
-        '  <w x="208 176 208 272" f="0"/>',
-        '  <w x="208 176 176 176" f="0"/>',
-        '  <w x="208 240 128 240" f="0"/>',
-        '  <w x="176 176 176 272" f="0"/>',
-        f'  <c x="176 272 176 320" f="0" c="{resolved_c:.10g}" iv="0.001" sr="0" vd="0"/>',
-        '  <g x="176 320 176 336" f="0"/>',
-        f'  <r x="176 176 176 112" f="0" r="{resolved_r:.12g}"/>',
-        '  <w x="176 112 272 112" f="0"/>',
-        f'  <R x="128 112 48 112" f="0" wf="0" maxv="{supply_voltage:g}"/>',
-        '  <O x="336 208 400 208" f="0" sc="0"/>',
-        f'  <r x="128 112 128 240" f="0" r="{_TRIGGER_R:g}"/>',
-        '  <w x="128 112 176 112" f="0"/>',
-        f'  <c x="128 240 80 240" f="0" c="{_TRIGGER_C:.10g}" iv="0.001" sr="0" vd="0"/>',
-        '  <L x="80 240 48 240" f="0" p="1" mm="true"/>',
-        '  <g x="304 304 304 320" f="0"/>',
-        '  <w x="272 112 336 112" f="0"/>',
-        '  <w x="336 112 336 176" f="0"/>',
-        '  <o en="14" sp="64" f="x6" p="0">',
-        '    <p v="0" sc="5"/>',
-        '    <p v="3" sc="0.00009765625"/>',
-        '  </o>',
-        '  <o en="10" sp="64" f="x6" p="0">',
-        '    <p v="0" sc="0.0000762939453125"/>',
-        '  </o>',
-        '  <h t="2" i1="7" i2="5"/>',
-        '</cir>',
+    # ── Layout (same coordinates as the reference circuit), legacy format ───────
+    el = [
+        timer555(208, 144, 320, 144, 4, 0),
+        wire(208, 176, 208, 272),
+        wire(208, 176, 176, 176),
+        wire(208, 240, 128, 240),
+        wire(176, 176, 176, 272),
+        cap(176, 272, 176, 320, resolved_c, 0.001),
+        gnd(176, 320, 176, 336),
+        res(176, 176, 176, 112, resolved_r),
+        wire(176, 112, 272, 112),
+        dc_rail(128, 112, 48, 112, supply_voltage),
+        out_marker(336, 208, 400, 208),
+        res(128, 112, 128, 240, _TRIGGER_R),
+        wire(128, 112, 176, 112),
+        cap(128, 240, 80, 240, _TRIGGER_C, 0.001),
+        logic_input(80, 240, 48, 240, True, supply_voltage, momentary=True),
+        gnd(304, 304, 304, 320),
+        wire(272, 112, 336, 112),
+        wire(336, 112, 336, 176),
     ]
-
-    circuit_text = "\n".join(lines) + "\n"
+    step = min(5e-6, resolved_t / 400)
+    scopes = [(index_of(el, "O"), 2 * supply_voltage, 64)]
+    circuit_text = assemble(el, step, scopes)
     note = " ".join(notes)
 
     return circuit_text, note
