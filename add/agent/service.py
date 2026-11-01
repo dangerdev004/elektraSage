@@ -274,7 +274,7 @@ def _run_turn(messages: list) -> tuple[str, list[dict]]:
         for tc in response.message.tool_calls:
             before = len(canned_step)
             result = execute_tool_call(
-                tc.function.name, tc.function.arguments, generated, canned_step
+                tc.function.name, dict(tc.function.arguments), generated, canned_step
             )
             messages.append(
                 {"role": "tool", "tool_name": tc.function.name, "content": result}

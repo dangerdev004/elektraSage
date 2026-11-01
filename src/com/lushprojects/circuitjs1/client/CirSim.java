@@ -590,6 +590,13 @@ MouseOutHandler, MouseWheelHandler {
 	MenuBar aiMenuBar = new MenuBar(true);
 	aiMenuBar.addItem(iconMenuItem("comment", "Open AI Chatbot", new MyCommand("ai", "openchatbot")));
 	menuBar.addItem(Locale.LS("AI Assistant"), aiMenuBar);
+
+	// SPICE launcher: its own top-level item. No drop-down, no MyCommand, no menuPerformed.
+	menuBar.addItem(new MenuItem(Locale.LS("SPICE"), new Command() {
+    	public void execute() {
+        	Window.open("http://localhost:5173", "circuit-ui-spice", "");
+    	}
+	}));
 	
 	m.addItem(dotsCheckItem = new CheckboxMenuItem(Locale.LS("Show Current")));
 	dotsCheckItem.setState(true);

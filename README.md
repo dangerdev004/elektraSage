@@ -105,6 +105,16 @@ podman run --rm -it --env-file .env -v $(pwd):/src:Z  --network host circuitjs1-
 
 This will use the current directory inside the container.
 
+The development container also starts the Spice UI and its ngspice API. Open
+http://localhost:5173 for the Spice UI; CircuitJS1 remains available at
+http://localhost:8000/circuitjs.html. The UI sends solver requests through its
+Vite proxy, so the API does not need a separate host port. Rebuild the image
+after changing the Containerfile:
+
+```
+podman build -f dev-start.Containerfile -t circuitjs1-dev:latest .
+```
+
 
 ## Embedding
 
