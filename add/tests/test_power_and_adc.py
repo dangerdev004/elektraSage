@@ -58,26 +58,36 @@ def test_converter_refuses_bad_arguments(fn, kw):
         fn(**kw)
 
 
-@pytest.mark.parametrize("bits", [2, 3])
+@pytest.mark.parametrize("bits", [2, 3, 4])
 def test_flash_adc_codes_in_simulation(bits):
     base = flash_adc(bits=bits)
     lines = base.splitlines()
-    outs = [i - 1 for i, l in enumerate(lines) if l.startswith("M ")]      # b0, b1 (, b2)
+    outs = [i - 1 for i, l in enumerate(lines) if l.startswith("M ")]      # emitted bit n-2 .. bit 0, then the top bit
+    weights = [*range(bits - 2, -1, -1), bits - 1]
     m, lsb = 2 ** bits, 5.0 / 2 ** bits
     for code in range(m):
         vin = (code + 0.5) * lsb
         net = re.sub(r"^R 96 (\d+) 48 \1 0 3 .*$", lambda g: f"R 96 {g.group(1)} 48 {g.group(1)} 0 0 40.0 {vin} 0.0",
                      base, flags=re.M)
         got = 0
-        for weight, idx in enumerate(outs):
+        for weight, idx in zip(weights, outs):
             _, v = simulate(net, 2e-4, dt=1e-5, probe_index=idx)
             got |= int(v[-1] > 2.5) << weight
         assert got == code, (bits, vin, got, code)
 
 
-def test_flash_adc_rejects_unsupported_resolution():
+@pytest.mark.parametrize("bits", [1, 9, 2.5, True, "3"])
+def test_flash_adc_rejects_unsupported_resolution(bits):
     with pytest.raises(ValueError):
-        flash_adc(bits=4)
+        flash_adc(bits=bits)
+
+
+@pytest.mark.parametrize("bits", range(2, 9))
+def test_flash_adc_every_resolution_is_wired_correctly(bits):
+    from tests.adc_check import check_geometry, check_logic
+    text = flash_adc(bits=bits)
+    assert check_geometry(text) == 0
+    assert check_logic(text, bits) == (True, "ok")
 
 
 def test_rectifier_cascade_reports_ripple_and_filtered_level():
@@ -106,7 +116,7 @@ def test_adc_at_the_end_of_a_chain_reports_codes_and_clipping():
 
 def test_flash_adc_no_wire_ends_on_another_wire_and_scope_watches_input():
     from agent.circuits import flash_adc
-    for bits in (2, 3):
+    for bits in (2, 3, 4, 5):
         text = flash_adc(bits=bits)
         lines = text.splitlines()
         wires = [tuple(map(int, l.split()[1:5])) for l in lines if l.startswith("w ")]

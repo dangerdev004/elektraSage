@@ -18,7 +18,8 @@ from dotenv import load_dotenv
 from ollama import Client, ChatResponse
 
 from agent.circuits import CIRCUIT_TOOLS
-from agent.cascade.tool import INTERNAL, cascade, parallel_sum, render_number, render_single
+from agent.cascade.tool import (INTERNAL, cascade, parallel_difference, parallel_sum, render_number,
+                                render_single)
 
 load_dotenv()
 
@@ -64,7 +65,7 @@ def build_without_buffers() -> str:
 
 
 available_functions = {fn.__name__: fn for fn in [*CIRCUIT_TOOLS, cascade, parallel_sum,
-                                                   apply_fix, build_without_buffers]}
+                                                   parallel_difference, apply_fix, build_without_buffers]}
 
 SYSTEM_PROMPT = """You are a circuit-parameter extraction assistant.
 
@@ -80,11 +81,14 @@ Rules:
   missing values. Do not call a tool with guessed or placeholder numbers.
 - Once you have every required parameter, call the tool. Don't ask for
   confirmation first if you already have everything you need.
-- If the user wants two signal paths in PARALLEL whose outputs are then summed,
-  added or mixed (e.g. "a low-pass and a high-pass in parallel, summed"), call
-  `parallel_sum` ONCE with the two paths. Each path is an ordered list of
-  circuits. Use `cascade` for a single chain. Do not write your own summary: the
-  reply is written by code.
+- If the user wants two or more signal paths in PARALLEL whose outputs are then
+  summed, added or mixed (e.g. "a low-pass and a high-pass in parallel, summed",
+  or "split into low, mid and high bands and add them"), call `parallel_sum`
+  ONCE with all the paths (use its `weights` only when they ask for different
+  proportions). If they want one path SUBTRACTED from another ("path A minus
+  path B"), call `parallel_difference` ONCE with the two paths. Each path is an
+  ordered list of circuits. Use `cascade` for a single chain. Do not write your
+  own summary: the reply is written by code.
 - If the user asks for a buffer or voltage follower between stages, include
   `voltage_follower` as a stage of the `cascade` call, in that position.
 - When the user asks to apply, accept or do the buffer fix a reply just offered, call
