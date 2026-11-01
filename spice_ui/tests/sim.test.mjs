@@ -610,7 +610,10 @@ await test('SPICE directives: allowlist, continuation, blocked commands, netlist
   assert.match(bad('.include foo.lib'), /\.include is not allowed/);
   assert.match(bad('.lib x'), /\.lib is not allowed/);
   assert.match(bad('.control'), /\.control is not allowed/);
-  assert.match(bad('.tran 1u 1m'), /Analysis Setup/);
+  assert.equal(bad('.tran 1u 1m'), '');
+  assert.deepEqual(checkDirectives('.tran 1u 1m').analysis, [{ type: 'tran', text: '.tran 1u 1m' }]);
+  assert.match(bad('.step param W 30n 250n 1n'), /ngspice itself has no \.step/);
+  assert.match(bad('.noise v(out) V1 dec 10 1 1k'), /not supported yet/);
   assert.match(bad('R1 a b 1k'), /not a directive/);
   assert.match(bad('.model x d_source(input_file=data.txt)'), /file or script/);
   assert.match(bad('.param s="abc"'), /quotes/);
@@ -710,4 +713,161 @@ await test('Pack as subcircuit: ports become pins, body is wrapped, unsupported 
   assert.ok(!none.errors.some((m) => /no ground/.test(m)));
 });
 
+await test('Show Pin Labels: names for transistors, op-amps and diodes appear in the SVG only when on', () => {
+  const ed = new Editor();
+  ed.loadElements([['NTransistorElm', 0, 0, 64, 0], ['OpAmpElm', 200, 0, 264, 0], ['DiodeElm', 400, 0, 464, 0], ['SubcktElm', 600, 0, 728, 0]]);
+  ed.setProps(ed.els[3].id, { model: 'X', pins: ['a', 'b', 'c'] });
+  const off = circuitToSvg(ed);
+  assert.ok(!off.includes('>OUT<') && !off.includes('>K<'));
+  ed.opts.showPins = true;
+  const on = circuitToSvg(ed);
+  for (const k of ['B', 'C', 'E', 'OUT', 'A', 'K', '1', '3']) assert.ok(on.includes(`>${k}<`), k);
+});
+
+await test('Subcircuit pin labels: saved, reloaded, drawn instead of the SPICE names', () => {
+  const ed = new Editor();
+  ed.loadElements([['SubcktElm', 0, 0, 160, 0]]);
+  ed.setProps(ed.els[0].id, { model: 'NE555', pins: ['1', '2', '3', '4'], labels: ['GND', 'TRIGGER', '', 'OUT'] });
+  const svg = circuitToSvg(ed);
+  assert.ok(svg.includes('>GND<') && svg.includes('>TRIGGER<') && svg.includes('>OUT<'));
+  assert.ok(svg.includes('>3<'), 'blank label falls back to the pin name');
+  const ed2 = new Editor();
+  ed2.loadDocument(JSON.parse(JSON.stringify(ed.toDocument('x'))));
+  assert.deepEqual(ed2.els[0].labels, ['GND', 'TRIGGER', '', 'OUT']);
+  ed2.setProps(ed2.els[0].id, { labels: ['', '', '', ''] });
+  assert.equal(ed2.els[0].labels, undefined);
+  assert.equal(ed2.toDocument('x').elements[0].labels, undefined);
+});
+
+await test('Meters: probe adds no element, ammeter is a 0 V source, ohmmeter a 1 mA test current; readings from a result', async () => {
+  const { addMeterVectors, meterReading } = await import('../src/sim/results.js');
+  const r = build([
+    ['DCVoltageElm', 0, 0, 0, 64, '5 V'], ['ResistorElm', 0, 0, 64, 0, '1k'], ['AmmeterElm', 64, 0, 128, 0],
+    ['ResistorElm', 128, 0, 128, 64, '1k'], ['ProbeElm', 64, 0, 64, 64], ['GroundElm', 0, 64, 0, 80], ['GroundElm', 64, 64, 64, 80],
+    ['OhmMeterElm', 200, 0, 200, 64],
+  ]);
+  assert.deepEqual(r.errors, []);
+  assert.match(r.text, /^vam1 \S+ \S+ DC 0$/m);
+  assert.match(r.text, /^iohm1 \S+ \S+ DC 1m$/m);
+  assert.ok(!/ProbeElm|Voltmeter/.test(r.text));
+  assert.deepEqual(r.meters.map((m) => m.kind), ['ammeter', 'probe', 'ohm']);
+  assert.ok(r.warnings.some((w) => /Ohmmeter/.test(w)), 'sources still on');
+  // a fake op result: nodes of the probe 2.5 V and 0 V, ammeter 2.5 mA, ohmmeter node 3 mV
+  const [a, b] = r.meters.find((m) => m.kind === 'probe').nodes;
+  const ohm = r.meters.find((m) => m.kind === 'ohm');
+  const vecs = [];
+  if (a !== '0') vecs.push({ label: `v(${a})`, unit: 'V', real: Float64Array.of(2.5) });
+  if (b !== '0') vecs.push({ label: `v(${b})`, unit: 'V', real: Float64Array.of(0) });
+  vecs.push({ label: 'i(vam1)', unit: 'A', real: Float64Array.of(0.0025) });
+  for (const [k, v] of [[ohm.nodes[0], 1.2], [ohm.nodes[1], 0.2]]) if (k !== '0' && !vecs.some((x) => x.label === `v(${k})`)) vecs.push({ label: `v(${k})`, unit: 'V', real: Float64Array.of(v) });
+  const res = addMeterVectors({ analysis: 'op', x: null, vectors: vecs }, r.meters);
+  assert.ok(res.vectors.some((v) => v.label === 'v(p1)'));
+  assert.equal(meterReading(res, r.meters.find((m) => m.kind === 'probe')).unit, 'V');
+  near(meterReading(res, r.meters.find((m) => m.kind === 'ammeter')).value, 0.0025);
+  const oh = meterReading(res, ohm);
+  assert.equal(oh.unit, 'Ω');
+  assert.ok(Number.isFinite(oh.value));
+  // a transient result: the reading is the last point
+  const t = addMeterVectors({ analysis: 'tran', x: Float64Array.of(0, 1, 2), vectors: [{ label: 'i(vam1)', unit: 'A', real: Float64Array.of(0, 1, 3) }] }, []);
+  near(meterReading(t, { kind: 'ammeter', source: 'vam1' }).value, 3);
+  // canvas shows the reading via meterProvider, and the symbol letter appears in SVG
+  const ed = new Editor();
+  ed.loadElements([['AmmeterElm', 0, 0, 64, 0]]);
+  ed.meterProvider = () => '2.5mA';
+  const svg = circuitToSvg(ed);
+  assert.ok(svg.includes('>A<') && svg.includes('2.5mA'));
+});
+
+await test('Probe counts as a connection (no false "only one connection"); subcircuit internals start unticked', async () => {
+  const r = build([['DCVoltageElm', 0, 0, 0, 64, '5 V'], ['ResistorElm', 0, 0, 64, 0, '1k'], ['ProbeElm', 64, 0, 64, 64], ['GroundElm', 0, 64, 0, 80], ['GroundElm', 64, 64, 64, 80]]);
+  assert.ok(!r.warnings.some((w) => /only one connection/.test(w)), r.warnings.join());
+  const { defaultVisible } = await import('../src/sim/results.js');
+  const vis = defaultVisible({ vectors: [{ label: 'v(n1)', unit: 'V' }, { label: 'v(x1.n002)', unit: 'V' }, { label: 'i(v1)', unit: 'A' }] });
+  assert.deepEqual([...vis], ['v(n1)']);
+});
+
+await test('MOSFET W/L apply to library models too; a .param name or {expression} is accepted', () => {
+  const library = [{ kind: 'model', name: 'BSIM_X', type: 'NMOS', file: 'x.lib' }];
+  const ed = new Editor();
+  ed.loadElements([['NMosfetElm', 0, 0, 64, 0], GND]);
+  ed.els[0].model = 'BSIM_X';
+  ed.setProps(ed.els[0].id, { params: { W: '2u', L: '{lval}' } });
+  const mk = () => buildCircuitNetlist({ elements: ed.els, terminalsOf: (e) => ed.terminals(e), title: 't', analysis: { type: 'op', params: {} }, library });
+  let r = mk();
+  assert.match(r.text, /^M1 \S+ \S+ \S+ \S+ BSIM_X W=0.000002 L=\{lval\}$/m);
+  ed.setProps(ed.els[0].id, { params: { W: '{wn*2}', L: '1u' } });
+  assert.match(mk().text, /W=\{wn\*2\} L=0.000001/);
+  ed.setProps(ed.els[0].id, { params: { W: '{evil;shell}', L: '1u' } });
+  assert.ok(mk().errors.some((m) => /not a number/.test(m)));
+  // generic model: a param name in a model parameter ends up in the .model card
+  ed.els[0].model = undefined;
+  ed.setProps(ed.els[0].id, { params: { VTO: '{vt}', W: '{wval}' }, model: '' });
+  r = mk();
+  assert.match(r.text, /\.model NMOD_\d+ NMOS\(LEVEL=1 VTO=\{vt\}\)|\.model NMOD NMOS\(LEVEL=1 VTO=\{vt\}\)/);
+  assert.match(r.text, /W=\{wval\}/);
+});
+
+await test('Instance parameters (LTspice style): MOSFET AD/AS/PD/PS/M, diode and BJT AREA/M, also with library models', () => {
+  const lib = [{ kind: 'model', name: 'CMOSN', type: 'NMOS', file: 't.lib' }, { kind: 'model', name: 'DX', type: 'D', file: 't.lib' }, { kind: 'model', name: 'QX', type: 'NPN', file: 't.lib' }];
+  const ed = new Editor();
+  ed.loadElements([
+    ['DCVoltageElm', 0, 0, 0, 64, '5 V'], ['NMosfetElm', 100, 0, 164, 0], ['DiodeElm', 200, 0, 264, 0], ['NTransistorElm', 300, 0, 364, 0], ['GroundElm', 0, 64, 0, 80],
+  ]);
+  const [, m, d, q] = ed.els;
+  ed.setProps(m.id, { model: 'CMOSN', params: { W: '10u', L: '0.18u', AD: '5p', AS: '5p', PD: '12u', PS: '12u', M: '2' } });
+  ed.setProps(d.id, { model: 'DX', params: { AREA: '2', M: '3' } });
+  ed.setProps(q.id, { params: { AREA: '4' } });
+  const r = buildCircuitNetlist({ elements: ed.els, terminalsOf: (e) => ed.terminals(e), title: 't', analysis: { type: 'op', params: {} }, library: lib });
+  assert.match(r.text, /^M1 \S+ \S+ \S+ \S+ CMOSN W=0.00001 L=1.8e-7 AD=5e-12 AS=5e-12 PD=0.000012 PS=0.000012 M=2$/m);
+  assert.match(r.text, /^D1 \S+ \S+ DX AREA=2 M=3$/m);
+  assert.match(r.text, /^Q1 \S+ \S+ \S+ QNPN AREA=4$/m);
+  // library model parameters stay with the model: VTO typed in the dialog is not written
+  ed.setProps(m.id, { params: { VTO: '1', W: '10u' } });
+  const r2 = buildCircuitNetlist({ elements: ed.els, terminalsOf: (e) => ed.terminals(e), title: 't', analysis: { type: 'op', params: {} }, library: lib });
+  assert.ok(!/VTO/.test(r2.text));
+});
+
+await test('LTspice-style directives: analysis from a directive, bare .param names in part fields, no knock-on loose-pin warnings', () => {
+  const ed = new Editor();
+  ed.loadElements([
+    ['DCVoltageElm', 0, 0, 0, 64, '1.8 V'], ['ResistorElm', 0, 0, 64, 0, '1k'], ['NMosfetElm', 64, 0, 128, 0], ['GroundElm', 0, 64, 0, 80],
+    ['DirectiveElm', 300, 0, 348, 0, '.param wval=1u\n.op'],
+  ]);
+  ed.setProps(ed.els[2].id, { params: { W: 'wval', L: '0.18u' } });
+  const an = { type: 'tran', params: { step: '1u', stop: '1m' } };
+  const build2 = () => buildCircuitNetlist({ elements: ed.els, terminalsOf: (e) => ed.terminals(e), analysis: an });
+  let r = build2();
+  assert.ok(r.errors.every((m) => !/Analysis Setup|not a number/.test(m)), r.errors.join());
+  assert.equal(r.analysisType, 'op');
+  assert.match(r.text, /\n\.op\n\.end/);
+  assert.ok(!/\.tran/.test(r.text));
+  assert.match(r.text, /W=\{wval\} L=1.8e-7/);
+  // undeclared name: clear error, and no "only one connection" noise next to the part with the error
+  ed.setProps(ed.els[2].id, { params: { W: 'W' } });
+  r = build2();
+  assert.ok(r.errors.some((m) => /W is not a number \("W"\)\. If "W" is a parameter, define it/.test(m)));
+  assert.ok(!r.warnings.some((m) => /only one connection/.test(m)));
+  // two analyses
+  ed.els[4].value = '.op\n.tran 1u 1m';
+  assert.ok(build2().errors.some((m) => /only one analysis command/.test(m)));
+  // no directive analysis: Analysis Setup applies
+  ed.els[4].value = '.param wval=1u';
+  ed.setProps(ed.els[2].id, { params: {} });
+  r = build2();
+  assert.equal(r.analysisType, 'tran');
+  assert.match(r.text, /\.tran/);
+});
+
+await test('directives: unrestricted mode passes ngspice commands through, still refuses .end/.step', () => {
+  const u = (t) => checkDirectives(t, { unrestricted: true });
+  const ok = u('.include "models/x.lib"\n.control\nrun\nshell ls\n.endc\n.tran 1u 1m');
+  assert.deepEqual(ok.problems, []);
+  assert.equal(ok.lines.length, 5);
+  assert.deepEqual(ok.analysis, [{ type: 'tran', text: '.tran 1u 1m' }]);
+  assert.match(u('.end').problems.join(), /\.end/);
+  assert.match(u('.step param W 1 2 1').problems.join(), /\.step/);
+  assert.match(checkDirectives('.include "x"').problems.join(), /not allowed/); // default stays strict
+});
+
 console.log(`\n${n} tests passed`);
+

@@ -5,7 +5,7 @@
 
 import { elLength, fromLocal } from './geometry.js';
 import { directiveBox } from './directive.js';
-import { getDef, halfHOf, subcktRows } from './parts.js';
+import { getDef, halfHOf, subcktRows, pinNames } from './parts.js';
 
 const line = (ctx, x1, y1, x2, y2) => {
   ctx.moveTo(x1, y1);
@@ -321,6 +321,14 @@ const DRAW = {
     });
   },
 
+  meter(ctx, L) {
+    const m = L / 2;
+    line(ctx, 0, 0, m - 14, 0);
+    line(ctx, m + 14, 0, L, 0);
+    ctx.moveTo(m + 14, 0);
+    ctx.arc(m, 0, 14, 0, Math.PI * 2);
+  },
+
   label(ctx, L, o, def) {
     line(ctx, 0, 0, L, 0);
     if (def.port) { ctx.rect(L, -10, 60, 20); return; } // ports are plain rectangles, labels are flags
@@ -399,6 +407,15 @@ export function drawElement(ctx, el, opts = {}) {
     ctx.fillText(def.title, c.x, c.y, L - 36);
     ctx.restore();
   }
+  if (def.kind === 'meter') {
+    ctx.save();
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const c = fromLocal(el, L / 2, 0);
+    ctx.fillText(def.letter, c.x, c.y);
+    ctx.restore();
+  }
   if (def.kind === 'label') {
     ctx.save();
     ctx.font = '10px sans-serif';
@@ -418,8 +435,8 @@ export function drawElement(ctx, el, opts = {}) {
     const at = (lx, ly) => fromLocal(el, lx, ly);
     ctx.font = '9px sans-serif';
     pins.forEach((n, i) => {
-      const q = i < left ? at(36, -half + 16 + 32 * i) : at(L - 36, -half + 16 + 32 * (i - left));
-      ctx.fillText(n, q.x, q.y, 36);
+      const q = i < left ? at(40, -half + 16 + 32 * i) : at(L - 40, -half + 16 + 32 * (i - left));
+      ctx.fillText(el.labels?.[i] || n, q.x, q.y, 52);
     });
     if (!pins.length) { const c = at(L / 2, 0); ctx.fillText('SUBCKT ?', c.x, c.y, L - 36); }
     ctx.restore();
@@ -436,6 +453,24 @@ export function drawElement(ctx, el, opts = {}) {
 }
 
 // Value text next to the part, always horizontal.
+/** Small pin names just outside each pin (Options > Show Pin Labels). `terms` = the part's pins in world space. */
+export function drawPinLabels(ctx, el, terms) {
+  const names = pinNames(el);
+  if (!names || names.length !== terms.length) return;
+  const cx = (el.x1 + el.x2) / 2;
+  const cy = (el.y1 + el.y2) / 2;
+  ctx.save();
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  terms.forEach((p, i) => {
+    const dx = p.x - cx; const dy = p.y - cy;
+    const d = Math.hypot(dx, dy) || 1;
+    ctx.fillText(names[i], p.x + (dx / d) * 8, p.y + (dy / d) * 8 - 6);
+  });
+  ctx.restore();
+}
+
 export function drawLabel(ctx, el, text) {
   if (!text) return;
   const mx = (el.x1 + el.x2) / 2;

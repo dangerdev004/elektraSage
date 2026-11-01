@@ -9,7 +9,7 @@ import { getDef } from '../canvas/parts.js';
 import { parseValue, parseSourceText, num } from './units.js';
 import { buildCommand, validateParams } from './analysis.js';
 import { PART_PARAMS, GATE_TYPES, SEQ_TYPES, opampParam } from './params.js';
-import { checkDirectives } from './directives.js';
+import { checkDirectives, declaredParams } from './directives.js';
 
 const ANNOTATION = new Set(['TextElm', 'BoxElm', 'LineElm']);
 
@@ -146,6 +146,18 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
     return entry.name;
   };
 
+  // "{wval}" or "{wval*2}" (as in LTspice) passed on to ngspice; null if it is not a safe expression
+  // A bare name (W = wval) must be declared with .param in a SPICE Directive.
+  const declared = new Set();
+  for (const e of elements) if (e.type === 'DirectiveElm') declaredParams(e.value ?? '').forEach((p) => declared.add(p));
+  const paramRef = (raw) => {
+    const s = String(raw).trim();
+    const m = /^\{([\w+\-*\/().\s]+)\}$/.exec(s);
+    if (m) return `{${m[1].trim()}}`;
+    if (/^[A-Za-z_]\w*$/.test(s) && declared.has(s.toLowerCase())) return `{${s}}`;
+    return null;
+  };
+
   // ---- generic models: only parameters the user set are written; the rest is SPICE's default ----
   const specifiedParams = (el, label) => {
     const model = [];
@@ -154,10 +166,25 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
       const raw = el.params?.[fld.key];
       if (raw === undefined || String(raw).trim() === '') continue;
       const v = parseValue(raw, '');
-      if (!Number.isFinite(v)) { errors.push(`${label}: ${fld.key} is not a number ("${raw}").`); return null; }
+      if (!Number.isFinite(v)) {
+        // a name or {expression} defined with .param in a SPICE Directive, as in LTspice: W = wval
+        const ref = paramRef(raw);
+        if (!ref) {
+          const bare = /^[A-Za-z_]\w*$/.test(String(raw).trim());
+          errors.push(`${label}: ${fld.key} is not a number ("${raw}")${bare ? `. If "${raw}" is a parameter, define it in a SPICE Directive (.param ${raw}=...)` : ''}`);
+          return null;
+        }
+        (fld.inst ? inst : model).push([fld.key, ref]);
+        continue;
+      }
       (fld.inst ? inst : model).push([fld.key, num(v)]);
     }
     return { model, inst };
+  };
+  /** Instance parameters of a part as ' W=.. L=..' (empty string if none), or null after pushing an error. */
+  const instText = (el, label) => {
+    const p = specifiedParams(el, label);
+    return p ? (p.inst.length ? ` ${p.inst.map(([k, v]) => `${k}=${v}`).join(' ')}` : '') : null;
   };
   /** -> { name, inst: 'W=.. L=..' } or undefined after pushing an error. */
   const genericModel = (el, label, type, baseName, base = {}) => {
@@ -187,6 +214,8 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
   };
 
   const directiveLines = []; // lines from SPICE Directive parts
+  const directiveAnalysis = []; // .op/.tran/.ac/.dc lines typed in a directive (they replace Analysis Setup)
+  const meters = []; // voltmeters, ammeters, ohmmeters: how to read them from the result
   const gates = []; // logic gates and flip-flops, wired up with bridges after the loop
   const openNets = new Set(); // nets of unused optional pins (SET, RST, unused Q-bar): no warning for those
   const gateModels = new Map(); // 'd_and|delay' -> model name
@@ -246,9 +275,10 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
         break;
       }
       case 'DirectiveElm': {
-        const { lines, problems } = checkDirectives(text);
+        const { lines, problems, analysis: found } = checkDirectives(text);
         problems.forEach((p) => errors.push(`SPICE Directive: ${p}`));
         directiveLines.push(...lines);
+        directiveAnalysis.push(...found);
         break;
       }
       case 'LogicInputElm': {
@@ -363,6 +393,28 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
         break;
       }
 
+      // Meters. The voltmeter adds nothing to the circuit (its trace is computed afterwards from the node voltages);
+      // the ammeter is a 0 V source in series; the ohmmeter pushes a 1 mA test current and reads the voltage.
+      case 'ProbeElm': {
+        use(t[0], t[1]); // counts as a connection for the loose-pin warning, adds no SPICE element
+        meters.push({ id: el.id, kind: 'probe', name: `P${meters.filter((m) => m.kind === 'probe').length + 1}`, nodes: [t[0], t[1]] });
+        break;
+      }
+      case 'AmmeterElm': {
+        const k = meters.filter((m) => m.kind === 'ammeter').length + 1;
+        use(t[0], t[1]);
+        cards.push(`vam${k} ${t[0]} ${t[1]} DC 0`);
+        meters.push({ id: el.id, kind: 'ammeter', name: `A${k}`, source: `vam${k}`, nodes: [t[0], t[1]] });
+        break;
+      }
+      case 'OhmMeterElm': {
+        const k = meters.filter((m) => m.kind === 'ohm').length + 1;
+        use(t[0], t[1]);
+        cards.push(`iohm${k} ${t[1]} ${t[0]} DC 1m`);
+        meters.push({ id: el.id, kind: 'ohm', name: `R${k}`, nodes: [t[0], t[1]], amps: 1e-3 });
+        break;
+      }
+
       case 'CurrentElm': {
         const v = parseValue(text, 'A');
         if (!Number.isFinite(v)) { bad('current is not a number', text); break; }
@@ -381,8 +433,10 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
           if (!g) break;
           name = g.name;
         }
+        const ipd = instText(el, def.label);
+        if (ipd === null) break;
         use(t[0], t[1]);
-        cards.push(`${ref(el, 'D')} ${t[0]} ${t[1]} ${name}`);
+        cards.push(`${ref(el, 'D')} ${t[0]} ${t[1]} ${name}${ipd}`);
         break;
       }
       case 'ZenerElm': {
@@ -395,8 +449,10 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
           if (!g) break;
           name = g.name;
         }
+        const ipz = instText(el, def.label);
+        if (ipz === null) break;
         use(t[0], t[1]);
-        cards.push(`${ref(el, 'D')} ${t[0]} ${t[1]} ${name}`);
+        cards.push(`${ref(el, 'D')} ${t[0]} ${t[1]} ${name}${ipz}`);
         break;
       }
 
@@ -411,8 +467,10 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
           if (!g) break;
           name = g.name;
         }
+        const ipq = instText(el, def.label);
+        if (ipq === null) break;
         use(t[0], t[1], t[2]);
-        cards.push(`${ref(el, 'Q')} ${t[1]} ${t[0]} ${t[2]} ${name}`);
+        cards.push(`${ref(el, 'Q')} ${t[1]} ${t[0]} ${t[2]} ${name}${ipq}`);
         break;
       }
       case 'NMosfetElm':
@@ -426,6 +484,11 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
           if (!g) break;
           name = g.name;
           inst = g.inst ? ` ${g.inst}` : '';
+        } else {
+          // a library model keeps its own model parameters, but W and L belong to the instance and still apply
+          const p = specifiedParams(el, def.label);
+          if (!p) break;
+          inst = p.inst.length ? ` ${p.inst.map(([k, v]) => `${k}=${v}`).join(' ')}` : '';
         }
         use(t[0], t[1], t[2]);
         cards.push(`${ref(el, 'M')} ${t[1]} ${t[0]} ${t[2]} ${t[2]} ${name}${inst}`);
@@ -542,13 +605,21 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
   for (const [label, n] of unsupported) {
     errors.push(`${label}${n > 1 ? ` (${n}x)` : ''} is not supported by the SPICE export yet. Delete it or replace it with a supported part.`);
   }
+  // A part with an error is skipped, so its pins are not counted; reporting "only one connection" for its
+  // neighbours then only adds noise. Show the connection warnings once the errors are fixed.
   for (const [node, n] of pins) {
-    if (n === 1 && !openNets.has(node)) warnings.push(`Node ${node} has only one connection (a loose wire or an unconnected pin).`);
+    if (errors.length === 0 && n === 1 && !openNets.has(node)) warnings.push(`Node ${node} has only one connection (a loose wire or an unconnected pin).`);
   }
   if (parts.length && !cards.some((c) => /^[VI]/.test(c))) warnings.push('The circuit has no voltage or current source.');
 
   let command = '';
-  if (analysis) {
+  let analysisType = analysis?.type ?? null;
+  if (directiveAnalysis.length > 1) {
+    errors.push(`SPICE Directive: only one analysis command is allowed (found ${directiveAnalysis.map((a) => `.${a.type}`).join(' and ')}).`);
+  } else if (directiveAnalysis.length === 1) {
+    command = directiveAnalysis[0].text;
+    analysisType = directiveAnalysis[0].type;
+  } else if (analysis) {
     const problems = validateParams(analysis.type, analysis.params);
     problems.forEach((p) => errors.push(`Analysis: ${p}`));
     if (!problems.length) {
@@ -583,5 +654,8 @@ export function buildCircuitNetlist({ elements, terminalsOf, title = 'circuit', 
     return { ok: errors.length === 0, text: bodyText, errors, warnings, refs, sources, libs: [], ports };
   }
   const text = [safeTitle, ...libNote, ...cards, ...modelCards.values(), ...directiveLines, command, '.end', ''].join('\n');
-  return { ok, text, errors, warnings, refs, sources, libs: libFiles };
+  if (meters.some((m) => m.kind === 'ohm') && elements.some((e) => ['DCVoltageElm', 'ACVoltageElm', 'RailElm', 'ACRailElm', 'CurrentElm', 'ClockElm', 'LogicInputElm'].includes(e.type))) {
+    warnings.push('Ohmmeter: the circuit still has sources switched on, so the reading includes their effect. Remove or short them to measure resistance.');
+  }
+  return { ok, text, errors, warnings, refs, sources, libs: libFiles, meters, analysisType };
 }

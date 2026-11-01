@@ -44,6 +44,9 @@ export const DEFS = {
   PushSwitchElm: { ...R, kind: 'switch', label: 'Push Switch' },
   LabeledNodeElm: { kind: 'label', minLen: 16, terminals: one, halfH: 12, ext: 60, value: '', label: 'Labeled Node' },
   PortElm: { kind: 'label', port: true, minLen: 16, terminals: one, halfH: 12, ext: 60, value: '', label: 'Subcircuit Port' },
+  ProbeElm: { ...R, kind: 'meter', letter: 'V', halfH: 16, label: 'Voltmeter/Scope Probe' },
+  AmmeterElm: { ...R, kind: 'meter', letter: 'A', halfH: 16, label: 'Ammeter' },
+  OhmMeterElm: { ...R, kind: 'meter', letter: '\u03a9', halfH: 16, label: 'Ohmmeter' },
   GroundElm: { kind: 'ground', minLen: 16, terminals: one, halfH: 12, ext: 12, label: 'Ground' },
   DCVoltageElm: { ...R, kind: 'dcvolt', value: '5 V', halfH: 14, label: 'Voltage Source' },
   ACVoltageElm: { ...R, kind: 'acvolt', value: '5 V, 40 Hz', halfH: 16, label: 'A/C Voltage Source' },
@@ -74,7 +77,7 @@ export const DEFS = {
   TFlipFlopElm: { ...chip('T FF', [{ n: 'T', x: 0, y: -16, side: 'l' }, { n: '', x: 0, y: 16, side: 'l', clk: true }, ...SETRST, ...QQ]), label: 'T Flip-Flop' },
   LatchElm: { ...chip('D LATCH', [{ n: 'D', x: 0, y: -16, side: 'l' }, { n: 'EN', x: 0, y: 16, side: 'l' }, ...SETRST, ...QQ]), label: 'Latch' },
   SRLatchElm: { ...chip('SR LATCH', [{ n: 'S', x: 0, y: -16, side: 'l' }, { n: 'R', x: 0, y: 16, side: 'l' }, ...QQ]), label: 'SR Latch' },
-  SubcktElm: { kind: 'subckt', minLen: 128, terminals: subcktTerminals, halfH: 32, ext: 0, label: 'Subcircuit' },
+  SubcktElm: { kind: 'subckt', minLen: 160, terminals: subcktTerminals, halfH: 32, ext: 0, label: 'Subcircuit' },
   OpAmpElm: { kind: 'opamp', minLen: 64, terminals: opamp, halfH: 34, ext: 0, label: 'Op Amp (ideal)' },
 };
 
@@ -84,6 +87,17 @@ DEFS.OpAmpRealElm = { ...DEFS.OpAmpElm, label: 'Op Amp (real)' };
 
 /** Half the symbol height of this element (subcircuits grow with their pin count). */
 export const halfHOf = (el) => (el.type === 'SubcktElm' ? subcktRows(el) * 16 + 8 : getDef(el.type).halfH);
+
+// Pin names in terminal order, for Options > Show Pin Labels. Subcircuit blocks use the pin's number
+// (their names are always drawn inside the block).
+const OPAMP = ['\u2212', '+', 'OUT'];
+export const PIN_NAMES = {
+  DiodeElm: ['A', 'K'], LEDElm: ['A', 'K'], ZenerElm: ['A', 'K'],
+  NTransistorElm: ['B', 'C', 'E'], PTransistorElm: ['B', 'C', 'E'],
+  NMosfetElm: ['G', 'D', 'S'], PMosfetElm: ['G', 'D', 'S'],
+  OpAmpElm: OPAMP, OpAmpRealElm: OPAMP, OpAmpSwapElm: ['+', '\u2212', 'OUT'],
+};
+export const pinNames = (el) => (el.type === 'SubcktElm' ? (el.pins ?? []).map((_, i) => String(i + 1)) : PIN_NAMES[el.type] ?? null);
 
 export function getDef(type) {
   const d = DEFS[type];

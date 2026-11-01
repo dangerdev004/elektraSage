@@ -43,8 +43,14 @@ const FORBIDDEN = /^\s*(\.(control|endc|include|inc|lib|read|csparam|osdi|spinit
 // Words that make ngspice open a file from inside a model or element line (".model x d_source(input_file=...)").
 const FILE_ACCESS = /\b(input_file|file)\s*=|["']/i;
 
-export function checkNetlist(text) {
+// SPICE_UNRESTRICTED=1 (set in the container, never on a normal desktop run) lets netlists use ngspice's own
+// commands: .control blocks, .include/.lib with any path, shell, write ... Anyone who can reach the server can
+// then run commands inside it, so only use it where the server's machine holds nothing you mind losing.
+export const UNRESTRICTED = process.env.SPICE_UNRESTRICTED === '1';
+
+export function checkNetlist(text, unrestricted = UNRESTRICTED) {
   if (typeof text !== 'string' || !text.trim()) return 'The netlist is empty.';
+  if (unrestricted) return null;
   // The first line is the title; ngspice never executes it, so a title like "Load test" is fine.
   const bad = FORBIDDEN.exec(text.split(/\r?\n/).slice(1).join('\n'));
   const body = text.split(/\r?\n/).slice(1).join('\n');
@@ -179,7 +185,7 @@ export function makeServer() {
       }
       if (req.method === 'GET' && req.url === '/api/models') {
         const lib = await scanLibrary(MODELS_DIR);
-        return send(res, 200, lib);
+        return send(res, 200, { ...lib, unrestricted: UNRESTRICTED });
       }
       if (req.method === 'POST' && req.url === '/api/models') {
         // Save a model file into the models folder. Same-origin JSON only; the content is checked first.

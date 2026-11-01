@@ -78,7 +78,7 @@ export function normalizeRaw(raw, analysisType) {
 }
 
 /** Which vectors start ticked: all voltages, no currents. */
-export const defaultVisible = (res) => new Set(res.vectors.filter((v) => v.unit === 'V').map((v) => v.label));
+export const defaultVisible = (res) => new Set(res.vectors.filter((v) => v.unit === 'V' && !v.label.includes('.')).map((v) => v.label)); // x1.n002 = inside a subcircuit
 
 export const colorFor = (res, label) => {
   const i = res.vectors.findIndex((v) => v.label === label);
@@ -120,4 +120,68 @@ export function measure(res, label, si) {
   let min = Infinity, max = -Infinity, sum = 0;
   for (const y of v.real) { if (y < min) min = y; if (y > max) max = y; sum += y; }
   return [['min', si(min)], ['max', si(max)], ['pk-pk', si(max - min)], ['mean', si(sum / v.real.length)]];
+}
+
+// ---------- meters ----------
+// `meters` comes from buildCircuitNetlist: [{ id, kind: 'probe'|'ammeter'|'ohm', name, nodes: [a, b], source?, amps? }].
+
+const vecOf = (res, label) => res.vectors.find((v) => v.label === label);
+const GROUND = (name) => name === '0';
+
+function nodeSeries(res, node) {
+  if (GROUND(node)) return { re: null, im: null };
+  const v = vecOf(res, `v(${node})`);
+  return v ? { re: v.real, im: v.imag ?? null } : null;
+}
+
+/** Add a v(P1)-style differential trace for every voltmeter probe, so it plots like any node. */
+export function addMeterVectors(res, meters = []) {
+  const extra = [];
+  for (const m of meters) {
+    if (m.kind !== 'probe') continue;
+    const a = nodeSeries(res, m.nodes[0]);
+    const b = nodeSeries(res, m.nodes[1]);
+    if (!a || !b) continue;
+    const n = (res.x ? res.x.length : 1);
+    const real = new Float64Array(n);
+    let imag = null;
+    for (let i = 0; i < n; i++) real[i] = (a.re ? a.re[i] : 0) - (b.re ? b.re[i] : 0);
+    if (a.im || b.im) {
+      imag = new Float64Array(n);
+      for (let i = 0; i < n; i++) imag[i] = (a.im ? a.im[i] : 0) - (b.im ? b.im[i] : 0);
+    }
+    extra.push({ label: `v(${m.name.toLowerCase()})`, unit: 'V', real, ...(imag ? { imag } : {}) });
+  }
+  return extra.length ? { ...res, vectors: [...res.vectors, ...extra] } : res;
+}
+
+const last = (arr, imag) => {
+  const i = arr.length - 1;
+  return imag ? Math.hypot(arr[i], imag[i]) : arr[i];
+};
+
+/** The value a meter shows on the canvas: { value, unit } from the last point of the result, or null. */
+export function meterReading(res, meter) {
+  if (!res || !meter) return null;
+  const diff = () => {
+    const a = nodeSeries(res, meter.nodes[0]);
+    const b = nodeSeries(res, meter.nodes[1]);
+    if (!a || !b) return null;
+    const va = a.re ? last(a.re, a.im) : 0;
+    const vb = b.re ? last(b.re, b.im) : 0;
+    return va - vb;
+  };
+  if (meter.kind === 'probe') {
+    const d = diff();
+    return d === null ? null : { value: d, unit: 'V' };
+  }
+  if (meter.kind === 'ammeter') {
+    const v = vecOf(res, `i(${meter.source})`);
+    return v && v.real.length ? { value: last(v.real, v.imag), unit: 'A' } : null;
+  }
+  if (meter.kind === 'ohm') {
+    const d = diff();
+    return d === null ? null : { value: d / meter.amps, unit: 'Ω' };
+  }
+  return null;
 }

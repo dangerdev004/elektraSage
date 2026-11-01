@@ -15,10 +15,12 @@ import { SAMPLES } from './data/samples.js';
 import { getDef } from './canvas/parts.js';
 import { circuitToSvg, circuitToPng, downloadFile, printCircuit } from './canvas/export.js';
 import { analyzeNodes, buildCircuitNetlist } from './sim/netlist.js';
+import { directiveAnalysis } from './sim/directives.js';
 import { ANALYSES, defaultAnalysis } from './sim/analysis.js';
 import { parseValue } from './sim/units.js';
 import { NgspiceServerEngine } from './sim/engine-server.js';
 import { si } from './sim/plotter.js';
+import { addMeterVectors, meterReading } from './sim/results.js';
 
 const MENUS = buildMenus();
 
@@ -97,7 +99,7 @@ export default function App() {
   }, []);
 
   const makeNetlist = useCallback((an = analysis) => buildCircuitNetlist({
-    elements: editor.els, terminalsOf: (e) => editor.terminals(e), title, analysis: an, library: library.models,
+    elements: editor.els, terminalsOf: (e) => editor.terminals(e), title, analysis: an, library: library.models, unrestricted: !!library.unrestricted,
   }), [editor, analysis, title, library]);
 
   const refreshLibrary = useCallback(async () => {
@@ -178,11 +180,11 @@ export default function App() {
       message: 'Running ngspice…',
     });
     try {
-      const res = await engine.run({ netlist: nl.text, analysisType: analysis.type, libs: nl.libs });
+      const res = await engine.run({ netlist: nl.text, analysisType: nl.analysisType ?? analysis.type, libs: nl.libs });
       if (token !== runToken.current) return; // stopped or reset while it ran
       resultCount.current += 1;
       const points = res.x ? res.x.length : 1;
-      setResult({ ...res, id: resultCount.current, snapshot: editor.snapshot() });
+      setResult({ ...addMeterVectors(res, nl.meters), meters: nl.meters, id: resultCount.current, snapshot: editor.snapshot() });
       setStatus({ state: 'done', message: `Done: ${points} point${points === 1 ? '' : 's'}` });
     } catch (e) {
       if (token !== runToken.current) return;
@@ -240,6 +242,17 @@ export default function App() {
     };
   }, [editor]);
 
+  // meters show their reading from the last run (only while the result still matches the circuit)
+  useEffect(() => {
+    editor.meterProvider = (el) => {
+      const r = resultRef.current;
+      if (!r || r.snapshot !== editor.snapshot()) return null;
+      const reading = meterReading(r, (r.meters ?? []).find((m) => m.id === el.id));
+      return reading ? `${si(reading.value, 4)}${reading.unit}` : null;
+    };
+    return () => { editor.meterProvider = null; };
+  }, [editor]);
+
   // Logic Output lamps: HIGH when their net is above half the logic level in the current result
   useEffect(() => {
     editor.lampProvider = (el) => {
@@ -285,7 +298,7 @@ export default function App() {
   // options that change the editor
   useEffect(() => {
     editor.setOptions({
-      showValues: opts.showValues, smallGrid: opts.smallGrid, euro: opts.euro,
+      showValues: opts.showValues, showPins: opts.showPins, smallGrid: opts.smallGrid, euro: opts.euro,
       white: opts.white, crosshair: opts.crosshair, noEdit: opts.noEdit, nodeLabels: opts.nodeLabels, wheelEdit: opts.wheelEdit,
     });
   }, [editor, opts]);
@@ -404,6 +417,8 @@ export default function App() {
     ? { state: 'stale', message: 'Circuit changed since this run. Press RUN again.' }
     : status;
 
+  const dirAnalysis = directiveAnalysis(editor.els, { unrestricted: !!library.unrestricted }); // a .op/.tran/.ac/.dc typed in a SPICE Directive replaces Analysis Setup
+  const analysisLabel = dirAnalysis ? `${dirAnalysis.text} (directive)` : ANALYSES[analysis.type].label;
   const resultsPanel = (floating) => (
     <ResultsPanel
       height={panelH}
@@ -412,7 +427,7 @@ export default function App() {
       result={result}
       errors={errors}
       warnings={warnings}
-      analysisLabel={ANALYSES[analysis.type].label}
+      analysisLabel={analysisLabel}
       floating={floating}
       rect={scope.rect}
       setRect={(rect) => setScope({ rect })}
@@ -436,6 +451,7 @@ export default function App() {
                 zoom {st.zoom}% · {st.count} parts{st.selCount ? ` · ${st.selCount} selected` : ''}
               </div>
             </div>
+            {library.unrestricted && <div className="unrestricted-banner" role="status">Unrestricted SPICE: .control, .include, shell and file commands run as typed. Only open circuits you trust.</div>}
             {toast && <div className="toast" role="status">{toast}</div>}
           </div>
           {scope.open && !scope.floating && resultsPanel(false)}
@@ -450,7 +466,7 @@ export default function App() {
           powerEnabled={opts.showPower}
           title={title}
           getNetlist={() => makeNetlist().text}
-          analysisLabel={ANALYSES[analysis.type].label}
+          analysisLabel={analysisLabel}
           onSetup={() => setSetupOpen(true)}
           status={shownStatus}
         />
@@ -469,6 +485,7 @@ export default function App() {
         <DirectiveDialog
           key={editing.id}
           element={editing}
+          unrestricted={!!library.unrestricted}
           onApply={(t) => editor.setProps(editing.id, { value: t })}
           onOk={(t) => { editor.setProps(editing.id, { value: t }); setEditing(null); }}
           onCancel={() => setEditing(null)}
@@ -536,7 +553,7 @@ export default function App() {
       {packOpen && (
         <PackDialog
           initialName={(title || 'MyBlock').replace(/[^A-Za-z0-9_]+/g, '_').replace(/^[^A-Za-z]+/, '') || 'MyBlock'}
-          build={(name) => buildCircuitNetlist({ elements: editor.els, terminalsOf: (e) => editor.terminals(e), title, analysis: null, library: library.models, pack: { name } })}
+          build={(name) => buildCircuitNetlist({ elements: editor.els, terminalsOf: (e) => editor.terminals(e), title, analysis: null, library: library.models, pack: { name }, unrestricted: !!library.unrestricted })}
           onSave={uploadModel}
           onClose={() => setPackOpen(false)}
         />

@@ -266,6 +266,10 @@ await test('library upload: saves, lists, refuses duplicates and unsafe files', 
   r = await up({ name: 'sec.lib', content: '.lib TT\n.model SEC D(IS=1n)\n.endl TT\n.include other.lib\n' });
   assert.equal(r.status, 200);
   assert.ok(!existsSync(path.join(modelsDir, 'evil.lib')));
+  // LTspice-style .sub files are accepted
+  r = await up({ name: 'NE555.sub', content: '.subckt NE555 gnd trig out rst ctrl thr dis vcc\nR1 vcc ctrl 5k\n.ends\n' });
+  assert.equal(r.status, 200);
+  assert.equal((await r.json()).subckts, 1);
 });
 
 await test('chat: disabled without CHAT_URL, validates input, forwards to the configured model', async () => {
@@ -309,4 +313,11 @@ await test('chat: disabled without CHAT_URL, validates input, forwards to the co
 });
 
 srv.close();
+await test('checkNetlist: unrestricted switch lets control constructs through but still needs a netlist', () => {
+  assert.equal(checkNetlist('t\nR1 n1 0 1k\n.control\nshell ls\n.endc\n.end', true), null);
+  assert.ok(checkNetlist('', true));
+  assert.match(checkNetlist('t\nR1 n1 0 1k\n.control\n.endc\n.end', false) ?? '', /Refused/);
+});
+
 console.log(`\n${n} tests passed`);
+

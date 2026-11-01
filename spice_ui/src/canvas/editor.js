@@ -6,7 +6,7 @@ import {
   GRID, snap, segDist, elLength, toLocal, fromLocal, axisEnd, rectsIntersect, normRect,
 } from './geometry.js';
 import { getDef, halfHOf } from './parts.js';
-import { drawElement, drawLabel } from './symbols.js';
+import { drawElement, drawLabel, drawPinLabels } from './symbols.js';
 import { directiveBox } from './directive.js';
 import { KEY_TO_PART } from '../data/shortcuts.js';
 import { PART_PARAMS, stepText, withUnit } from '../sim/params.js';
@@ -19,6 +19,7 @@ const COLORS = {
 
 export const DEFAULT_OPTS = {
   showValues: true,
+  showPins: false,
   smallGrid: false,
   euro: false,
   white: false,
@@ -50,6 +51,7 @@ export class Editor {
     this.onContextMenu = null; // ({x, y, onElement}) => void
     this.onEdit = null; // (element) => void   (double click)
     this.onToggle = null; // (element) => void  (a switch or logic input was clicked)
+    this.meterProvider = null; // (element) => string | null   reading shown beside a meter
     this.lampProvider = null; // (element) => true | false | null   state of a Logic Output's net
     this.onNotice = null; // (text) => void
     this.rev = 0; // bumped on every change to the circuit
@@ -367,6 +369,7 @@ export class Editor {
     if (!el) return;
     this.pushUndo();
     if (patch.value !== undefined) el.value = patch.value;
+    if (patch.labels !== undefined) { if (patch.labels?.some((l) => l)) el.labels = [...patch.labels]; else delete el.labels; }
     if (patch.pins !== undefined) { if (patch.pins?.length) el.pins = [...patch.pins]; else delete el.pins; }
     if (patch.model !== undefined) { if (patch.model) el.model = patch.model; else delete el.model; }
     if (patch.params !== undefined) { if (Object.keys(patch.params).length) el.params = { ...patch.params }; else delete el.params; }
@@ -378,11 +381,12 @@ export class Editor {
   toDocument(title = '') {
     return {
       format: 'circuit-ui', version: 1, title,
-      elements: this.els.map(({ type, x1, y1, x2, y2, mirror, value, model, params, pins }) => {
+      elements: this.els.map(({ type, x1, y1, x2, y2, mirror, value, model, params, pins, labels }) => {
         const o = { type, x1, y1, x2, y2, mirror: !!mirror };
         if (value !== undefined) o.value = value;
         if (model) o.model = model;
         if (pins && pins.length) o.pins = [...pins];
+        if (labels && labels.some((l) => l)) o.labels = [...labels];
         if (params && Object.keys(params).length) o.params = { ...params };
         return o;
       }),
@@ -400,6 +404,7 @@ export class Editor {
       if (!ok) throw new Error(`Element ${i + 1} is malformed (needs type, x1, y1, x2, y2 as numbers).`);
       const el = this.newElement(o.type, o.x1, o.y1, o.x2, o.y2, typeof o.value === 'string' ? o.value : undefined, !!o.mirror);
       if (typeof o.model === 'string' && o.model) el.model = o.model;
+      if (o.type === 'SubcktElm' && Array.isArray(o.labels) && o.labels.length <= 64 && o.labels.every((l) => typeof l === 'string' && l.length <= 24 && !/[\u0000-\u001f]/.test(l))) el.labels = [...o.labels];
       if (o.type === 'SubcktElm' && Array.isArray(o.pins) && o.pins.length <= 64 && o.pins.every((p) => typeof p === 'string' && /^[\w.+\-#$%@!]{1,40}$/.test(p))) el.pins = [...o.pins];
       if (o.params && typeof o.params === 'object' && !Array.isArray(o.params)) {
         const params = {};
@@ -818,10 +823,13 @@ export class Editor {
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
       drawElement(ctx, el, el.type === 'LogicOutputElm' ? { ...o, lamp: this.lampProvider?.(el) ?? null } : o);
-      if (this.opts.showValues && getDef(el.type).kind !== 'directive' && getDef(el.type).kind !== 'label') {
+      if (getDef(el.type).kind === 'meter') {
+        drawLabel(ctx, el, this.meterProvider?.(el) ?? '');
+      } else if (this.opts.showValues && getDef(el.type).kind !== 'directive' && getDef(el.type).kind !== 'label') {
         const def = getDef(el.type);
         drawLabel(ctx, el, el.model ?? el.value ?? def.value);
       }
+      if (this.opts.showPins) drawPinLabels(ctx, el, this.terminals(el));
     };
 
     const counts = new Map();

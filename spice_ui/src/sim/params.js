@@ -16,6 +16,8 @@ const DIODE = [
   f('RS', 'Series resistance (RS)', 'Ω'),
   f('CJO', 'Zero-bias capacitance (CJO)', 'F'),
   f('TT', 'Transit time (TT)', 's'),
+  f('AREA', 'Area factor (AREA)', '', { inst: true }),
+  f('M', 'Multiplier (M)', '', { inst: true }),
 ];
 const BJT = [
   f('BF', 'Forward beta (BF)', ''),
@@ -26,6 +28,8 @@ const BJT = [
   f('CJE', 'B-E capacitance (CJE)', 'F'),
   f('CJC', 'B-C capacitance (CJC)', 'F'),
   f('TF', 'Forward transit time (TF)', 's'),
+  f('AREA', 'Area factor (AREA)', '', { inst: true }),
+  f('M', 'Multiplier (M)', '', { inst: true }),
 ];
 const MOS = [
   f('VTO', 'Threshold voltage (VTO)', 'V'),
@@ -33,6 +37,11 @@ const MOS = [
   f('LAMBDA', 'Channel-length modulation (LAMBDA)', '1/V'),
   f('W', 'Channel width (W)', 'm', { inst: true }),
   f('L', 'Channel length (L)', 'm', { inst: true }),
+  f('AD', 'Drain area (AD)', 'm²', { inst: true }),
+  f('AS', 'Source area (AS)', 'm²', { inst: true }),
+  f('PD', 'Drain perimeter (PD)', 'm', { inst: true }),
+  f('PS', 'Source perimeter (PS)', 'm', { inst: true }),
+  f('M', 'Number of parallel devices (M)', '', { inst: true }),
 ];
 
 // ---- op amps (explicit defaults) -----------------------------------------------------------

@@ -7,7 +7,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
-export const LIB_EXT = new Set(['.lib', '.mod', '.model', '.cir', '.sp', '.spi', '.txt', '.inc']);
+export const LIB_EXT = new Set(['.lib', '.mod', '.model', '.cir', '.sp', '.spi', '.txt', '.inc', '.sub']);
 const MAX_FILES = 200;
 const MAX_BYTES = 5 * 1024 * 1024;
 

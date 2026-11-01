@@ -6,7 +6,7 @@
 // that API the drawers use and writes <path> / <text> elements instead of pixels. No DOM is needed, which
 // is why it is unit-tested in Node.
 
-import { drawElement, drawLabel } from './symbols.js';
+import { drawElement, drawLabel, drawPinLabels } from './symbols.js';
 import { getDef } from './parts.js';
 import { directiveBox } from './directive.js';
 
@@ -44,10 +44,13 @@ export function renderCircuit(ctx, editor) {
     ctx.strokeStyle = INK;
     ctx.fillStyle = INK;
     drawElement(ctx, el, el.type === 'LogicOutputElm' ? { ...o, lamp: editor.lampProvider?.(el) ?? null } : o);
-    if (editor.opts.showValues && getDef(el.type).kind !== 'directive' && getDef(el.type).kind !== 'label') {
+    if (getDef(el.type).kind === 'meter') {
+      drawLabel(ctx, el, editor.meterProvider?.(el) ?? '');
+    } else if (editor.opts.showValues && getDef(el.type).kind !== 'directive' && getDef(el.type).kind !== 'label') {
       const def = getDef(el.type);
       drawLabel(ctx, el, el.model ?? el.value ?? def.value);
     }
+    if (editor.opts.showPins) drawPinLabels(ctx, el, editor.terminals(el));
     for (const t of editor.terminals(el)) {
       const k = `${Math.round(t.x)},${Math.round(t.y)}`;
       counts.set(k, (counts.get(k) ?? 0) + 1);

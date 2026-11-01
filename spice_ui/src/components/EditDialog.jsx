@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getDef } from '../canvas/parts.js';
 import { PART_PARAMS, OPAMP_PRESETS, opampParam, stepText, withUnit } from '../sim/params.js';
-import { checkDirectives, ALLOWED_DIRECTIVES } from '../sim/directives.js';
+import { checkDirectives, ALLOWED_DIRECTIVES, ANALYSIS_COMMANDS } from '../sim/directives.js';
 
 // Minimal "Edit..." dialog: one free-text value per part (shown next to the symbol).
 // CircuitJS1's real dialogs have one field per parameter; that comes with the simulator.
@@ -145,7 +145,7 @@ export function ParamDialog({ element, library, onApply, onOk, onCancel }) {
               </label>
             );
           }
-          const disabled = !!model;
+          const disabled = !!model && !f.inst; // W and L stay editable with a library model
           return (
             <div className="pfield" key={f.key}>
               <label>{f.label}</label>
@@ -163,7 +163,7 @@ export function ParamDialog({ element, library, onApply, onOk, onCancel }) {
             </div>
           );
         })}
-        {model && <p className="hint">A library model is selected, so the generic parameters are not used.</p>}
+        {model && <p className="hint">A library model is selected, so its own parameters are used. Instance parameters (sizes, area, multiplier: W, L, AD, AS, PD, PS, AREA, M) still apply and are written on this part only. A value may also be {'{name}'} or {'{expression}'} using a .param from a SPICE Directive, e.g. W = {'{wval}'}.</p>}
         {spec.note && !isOpamp && <p className="hint">{spec.note}</p>}
         {spec.modelType && !choices.length && !library?.error && <p className="hint">No {spec.modelType} models in the library folder (optional).</p>}
         <div className="modal-buttons spread">
@@ -176,12 +176,23 @@ export function ParamDialog({ element, library, onApply, onOk, onCancel }) {
   );
 }
 
+const INSERTS = [
+  ['.op', '.op'],
+  ['.tran', '.tran 1u 10m'],
+  ['.ac', '.ac dec 10 1 1Meg'],
+  ['.dc', '.dc V1 0 5 0.1'],
+  ['.param', '.param wval=1u'],
+  ['.model', '.model DMOD D(IS=1e-14 N=1.05)'],
+  ['.ic', '.ic v(n1)=0'],
+  ['.meas', '.meas tran vmax MAX v(n1)'],
+];
+
 /** Multi-line text box for a SPICE Directive part, with the same check the netlist builder applies. */
-export function DirectiveDialog({ element, onApply, onOk, onCancel }) {
+export function DirectiveDialog({ element, unrestricted = false, onApply, onOk, onCancel }) {
   const [text, setText] = useState(element.value ?? '');
   const ref = useRef(null);
   useEffect(() => { ref.current?.focus(); }, []);
-  const { problems } = checkDirectives(text);
+  const { problems, analysis: analysisFound } = checkDirectives(text, { unrestricted });
   return (
     <div className="modal-backdrop" onPointerDown={onCancel}>
       <form className="modal params" onPointerDown={(e) => e.stopPropagation()} onSubmit={(ev) => { ev.preventDefault(); onOk(text); }}>
@@ -195,10 +206,19 @@ export function DirectiveDialog({ element, onApply, onOk, onCancel }) {
           onChange={(ev) => setText(ev.target.value)}
           placeholder={'.param vcc=5\n.model DMYLED D(IS=1e-18 N=1.9)\n.options reltol=1e-4'}
         />
-        <p className="hint">
-          Allowed: {ALLOWED_DIRECTIVES.map((c) => `.${c}`).join(' ')}. Start a line with + to continue the previous one;
-          * starts a comment. The analysis comes from Simulation &gt; Analysis Setup, and model files from the Model Library.
-        </p>
+        <div className="insert-row">
+          {INSERTS.map(([label, snippet]) => (
+            <button type="button" className="mini" key={label} title={`Add: ${snippet}`} onClick={() => setText((t) => `${t.trimEnd()}${t.trim() ? '\n' : ''}${snippet}`)}>{label}</button>
+          ))}
+        </div>
+        {unrestricted && <p className="hint warn">Unrestricted mode (set by the server): any ngspice command is passed through, including .include, .lib and .control blocks. .step still does not exist in ngspice.</p>}
+        {!unrestricted && <p className="hint">
+          Like LTspice: type SPICE lines. Allowed: {ALLOWED_DIRECTIVES.map((c) => `.${c}`).join(' ')} and one analysis command
+          ({ANALYSIS_COMMANDS.map((c) => `.${c}`).join(' ')}), which then replaces Simulation &gt; Analysis Setup. Start a line with + to
+          continue the previous one; * starts a comment. Use a parameter in a part's dialog by its name (W = wval) or as {'{wval}'}.
+          Not available: .step (ngspice has none), .include/.lib (use the Model Library).
+        </p>}
+        {analysisFound.length > 0 && <p className="hint ok">Analysis from this block: {analysisFound.map((a) => a.text).join(' ; ')}</p>}
         {problems.length > 0 && <ul className="problems">{problems.map((p) => <li key={p}>{p}</li>)}</ul>}
         <div className="modal-buttons spread">
           <button type="button" onClick={() => onApply(text)}>Apply</button>
@@ -215,13 +235,15 @@ export function SubcktDialog({ element, library, onApply, onOk, onCancel }) {
   const subs = (library?.models ?? []).filter((m) => m.kind === 'subckt');
   const [name, setName] = useState(element.model ?? '');
   const [params, setParams] = useState({ ...(element.params ?? {}) });
+  const [labels, setLabels] = useState([...(element.labels ?? [])]);
   const entry = subs.find((m) => m.name === name);
   const missing = name && !entry;
-  const pick = (n) => { setName(n); setParams({}); };
+  const pick = (n) => { setName(n); setParams({}); setLabels([]); };
   const result = () => {
     const p = {};
     for (const pd of entry?.params ?? []) if (String(params[pd.name] ?? '').trim() !== '') p[pd.name] = params[pd.name];
-    return { model: entry ? entry.name : name, pins: entry ? entry.pins : element.pins ?? [], params: p };
+    const pinList = entry ? entry.pins : element.pins ?? [];
+    return { model: entry ? entry.name : name, pins: pinList, params: p, labels: pinList.map((_, i) => (labels[i] ?? '').trim()) };
   };
   return (
     <div className="modal-backdrop" onPointerDown={onCancel}>
@@ -235,6 +257,16 @@ export function SubcktDialog({ element, library, onApply, onOk, onCancel }) {
           </select>
         </label>
         {entry && <p className="hint">Pins, in SPICE order: {entry.pins.join(', ') || '(none)'}. Down the left side first, then the right.</p>}
+        {(entry || element.pins?.length > 0) && (
+          <div className="pin-table">
+            <div className="hint">Pin labels shown on the block (blank = use the SPICE pin name):</div>
+            {(entry ? entry.pins : element.pins).map((pn, i) => (
+              <label className="row" key={`${i}-${pn}`}>{i + 1}. {pn}
+                <input maxLength={24} value={labels[i] ?? ''} placeholder={pn} onChange={(ev) => { const l = [...labels]; l[i] = ev.target.value; setLabels(l); }} />
+              </label>
+            ))}
+          </div>
+        )}
         {entry && (entry.params ?? []).map((pd) => (
           <label className="row" key={pd.name}>{pd.name}
             <input value={params[pd.name] ?? ''} placeholder={`default ${pd.def}`} onChange={(ev) => setParams({ ...params, [pd.name]: ev.target.value })} />

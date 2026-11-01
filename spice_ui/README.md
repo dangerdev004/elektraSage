@@ -56,7 +56,7 @@ npm run build     # production build into dist/
 ## Model library (your own SPICE models)
 
 Put SPICE model files in the `models/` folder next to `package.json` (or set `MODELS_DIR`). Supported
-extensions: `.lib .mod .model .cir .sp .spi .inc .txt`. `models/generic.lib` ships as an example; those
+extensions: `.lib .mod .model .cir .sp .spi .inc .sub .txt`. `models/generic.lib` ships as an example; those
 are simple generic parameter sets I wrote, **not manufacturer models of real parts**.
 
 1. Add a file, then Simulation > Model Library... > Refresh to see what was found.
@@ -310,7 +310,7 @@ and file-access constructs.
 ## Model library files
 
 Simulation > Model Library lists every `.model` and `.subckt` found in the `models/` folder. Upload... adds files
-(`.lib .mod .model .cir .sp .spi .inc .txt`, up to 5 MB); a name that already exists asks before replacing. Uploads
+(`.lib .mod .model .cir .sp .spi .inc .sub .txt`, up to 5 MB); a name that already exists asks before replacing. Uploads
 containing `.control`, `.include` with a path, `file=` or similar are refused. You can also copy files into the
 folder and press Refresh.
 
@@ -362,3 +362,70 @@ model through the local server, which forwards to an OpenAI-compatible endpoint 
 browser. "Send circuit netlist" attaches the current netlist as context. The reply is read from
 `choices[0].message.content` (Ollama's `message.content` also works); no streaming yet. The conversation is kept in memory
 only. If your agent uses a different request format, change `askModel` in `server/server.mjs`.
+
+## Pin labels
+
+Options > Show Pin Labels (off by default) writes small pin names next to the pins: A/K on diodes, LEDs and Zeners;
+B/C/E on bipolar transistors; G/D/S on MOSFETs; −/+/OUT on op-amps (swapped for the "+ on top" op-amp); and the pin
+number (1, 2, ...) on Subcircuit blocks, whose names are always drawn inside the block. The labels also appear in the
+PNG/SVG/print exports. Other parts do not have pin labels yet.
+
+## Renaming subcircuit pins
+
+Double-click a Subcircuit block: under the subcircuit picker there is a table with one row per SPICE pin. Type the
+label you want on the block (GND, TRIGGER, THRESHOLD, ...); blank keeps the SPICE name. Labels are saved with the
+circuit and are display-only: the netlist still uses the file's pin order. They apply to that block only, so each
+placed 555 needs its own labels (copy and paste a labelled block to reuse them). Labels are limited to 24 characters
+and are squeezed to fit next to the pin.
+
+## Meters and probes
+
+Draw > Outputs and Labels has three two-terminal meters. After RUN their reading is shown beside them (operating
+point: the value; transient and DC sweep: the last point; AC: the magnitude at the last frequency). The reading
+disappears when the circuit changes, until you run again.
+
+- **Voltmeter/Scope Probe (V):** measures the voltage across its two terminals. It adds nothing to the SPICE circuit; its
+  trace `v(p1)`, `v(p2)`, ... is computed from the node voltages and appears in the results list, so it plots like any node.
+- **Ammeter (A):** a 0 V source in series (`vam1 a b DC 0`); reads the current flowing from its first terminal to its
+  second. Its trace is `i(vam1)`. Put it in the wire path of the branch you want to measure.
+- **Ohmmeter (Ω):** pushes a 1 mA test current through its terminals and shows voltage / 1 mA. It does not switch the
+  rest of the circuit off, so you get a warning when sources are present. Remove or short the sources to read a plain
+  resistance. It only makes sense as an operating-point reading.
+
+## Parameters with library models, and .param
+
+With a library model selected for a MOSFET, the model's own parameters (VTO, KP, ...) come from the library, but
+**W and L stay editable**: they belong to the instance and are written on the `M` line. Any numeric field of the generic
+parameter dialogs also accepts `{name}` or `{expression}` (LTspice style) referring to a `.param` defined in a SPICE
+Directive part, for example a directive `.param wval=2u` and W = `{wval}`. Only letters, digits, `_ + - * / ( ) .` and
+spaces are allowed inside the braces. Not supported: `.step` (ngspice has no such command; stepping a value means
+running once per value), and changing the model parameters of a library model per part.
+
+## Model parameters and instance parameters (as in LTspice)
+
+A part with a library model keeps the model's own numbers (VTO, KP, BF, IS ...): they live in the `.model` line in the
+library file, are shared by every part using that model, and are greyed out in the dialog. What you can set on one part
+only are its *instance* parameters, written on the device line after the model name: MOSFET `W L AD AS PD PS M`,
+diode and BJT `AREA M` (for example `M1 d g s b CMOSN W=10u L=0.18u M=2`). Empty = ngspice's default. To change a model
+number itself, edit the model text in the library file (or copy the model under a new name), as in LTspice.
+
+## Directives work like LTspice
+
+A SPICE Directive block is where you type SPICE text. It accepts `.param .model .options .ic .nodeset .temp .global .func .meas`
+and **one analysis command: `.op`, `.tran`, `.ac` or `.dc`**. When a directive has an analysis command it replaces
+Simulation > Analysis Setup (the side panel shows "... (directive)"); with none, Analysis Setup applies. The directive
+dialog has Insert buttons for the common lines. `.step` is not available because ngspice has no `.step` command; `.noise`,
+`.tf` and the others are not supported yet.
+
+Part fields can use a parameter by name, as in LTspice: define `.param wval=1u` in a directive, then type `wval` (or `{wval}`
+or `{2*wval}`) in a part's W field. A name that was never defined gives an error naming it. Connection warnings ("only one
+connection") are shown only once there are no errors, because a part with an error is skipped and its neighbours would
+otherwise look unconnected.
+
+## Unrestricted SPICE (container use)
+
+By default the server refuses ngspice's own commands (`.control`, `.include`, `.lib`, `shell`, `write`, quotes in lines...) because a circuit file from someone else could otherwise run commands on your computer when you press RUN. When the server runs inside a container that holds nothing you mind losing, start it with
+
+    SPICE_UNRESTRICTED=1 node server/server.mjs
+
+The setting lives on the server only (a browser cannot turn it on). The editor then passes SPICE Directive text through as typed, and shows a red banner. Notes: `.end` is still refused (it would cut the circuit short), `.step` still does not exist in ngspice, and library file uploads keep their own checks. In Docker, mount only the models folder, run as a non-root user, and do not expose the port beyond the machine that needs it: in this mode anyone who can reach the server can run commands inside the container.

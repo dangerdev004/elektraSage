@@ -17,6 +17,7 @@ export const OPTION_ITEMS = [
   ['showVoltage', 'Show Voltage'],
   ['showPower', 'Show Power'],
   ['showValues', 'Show Values'],
+  ['showPins', 'Show Pin Labels'],
   ['nodeLabels', 'Label All Nodes'],
   ['smallGrid', 'Small Grid'],
   ['toolbar', 'Toolbar'],
@@ -32,6 +33,7 @@ export const DEFAULT_UI_OPTIONS = {
   showVoltage: true,
   showPower: false,
   showValues: true,
+  showPins: false,
   nodeLabels: false,
   smallGrid: false,
   toolbar: true,
@@ -46,7 +48,7 @@ export const DEFAULT_UI_OPTIONS = {
 
 // Options that actually change the picture or the editor in this prototype.
 export const WORKING_OPTIONS = new Set([
-  'showVoltage', 'showPower', 'showValues', 'nodeLabels', 'smallGrid', 'toolbar', 'crosshair', 'euro', 'white',
+  'showVoltage', 'showPower', 'showValues', 'showPins', 'nodeLabels', 'smallGrid', 'toolbar', 'crosshair', 'euro', 'white',
   'noEdit','wheelEdit',
 ]);
 

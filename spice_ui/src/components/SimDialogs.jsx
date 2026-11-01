@@ -136,7 +136,7 @@ export function ModelLibraryDialog({ library, loading, onRefresh, onUpload, onCl
             <button type="button" onClick={() => { setPending(null); setNote(null); }}>Keep the old one</button>
           </div>
         )}
-        <input ref={picker} type="file" multiple hidden accept=".lib,.mod,.model,.cir,.sp,.spi,.inc,.txt" onChange={pick} />
+        <input ref={picker} type="file" multiple hidden accept=".lib,.mod,.model,.cir,.sp,.spi,.inc,.sub,.txt" onChange={pick} />
         <div className="modal-buttons">
           <button type="button" onClick={() => picker.current?.click()}>Upload…</button>
           <button type="button" onClick={onRefresh} disabled={loading}>{loading ? 'Loading…' : 'Refresh'}</button>

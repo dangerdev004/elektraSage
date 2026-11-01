@@ -182,3 +182,9 @@ ul.warn { margin: 6px 0 0; padding-left: 18px; color: #ffcc80; }
 .e-sw { bottom: -3px; left: -3px; width: 10px; height: 10px; cursor: nesw-resize; }
 .e-nw { top: -3px; left: -3px; width: 10px; height: 10px; cursor: nwse-resize; }
 .e-se { bottom: -3px; right: -3px; width: 10px; height: 10px; cursor: nwse-resize; }
+.pin-table { max-height: 34vh; overflow-y: auto; margin: 6px 0; }
+.insert-row { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.hint.ok { color: #1b7a34; }
+
+.unrestricted-banner { position: absolute; left: 8px; right: 8px; top: 8px; z-index: 5; padding: 4px 10px; border-radius: 4px; background: #7a1d1d; color: #fff; font-size: 12px; pointer-events: none; }
+.hint.warn { color: #b3261e; }
