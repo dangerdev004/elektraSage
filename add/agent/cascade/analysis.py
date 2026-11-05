@@ -1,8 +1,10 @@
 """Pure-Python AC analysis of a composed chain, plus deterministic flags.
 
 Scope (stated honestly in every report): linear parts only - resistors,
-capacitors, inductors and an IDEAL op amp (no gain-bandwidth limit, no
-clipping in the response curve). Any other element type, or a chain that
+capacitors, inductors and a single-pole op amp (open-loop gain 1e5 with the
+gain-bandwidth product stored in the CircuitJS dump, 1 MHz by default; an op amp
+with no stored bandwidth is treated as ideal). Slew rate and clipping inside the
+response curve are not modelled. Any other element type, or a chain that
 starts with a generator, is reported as "not analysed" rather than guessed.
 Other signal sources in the circuit are held at 0.
 
@@ -25,6 +27,7 @@ from .ports import infer, is_signal_source
 SUPPORTED = {"w", "g", "r", "c", "l", "a", "O", "170", "v", "R", "x", "t", "f", "d", "z"}
 POINTS_PER_DECADE = 80
 TOL = 0.20                 # corner / gain / loading deviations beyond 20% are flagged
+OPAMP_A0 = 1e5             # open-loop DC gain used with the op-amp's gain-bandwidth product (single pole)
 
 
 # ---- number formatting ----------------------------------------------------
@@ -64,11 +67,15 @@ class Driver:
     sweep: tuple[float, float] | None
     f0: float | None
 
-    def grid(self) -> list[float]:
+    def grid(self, nl: "Netlist | None" = None, extend: bool = False) -> list[float]:
         if self.sweep:
             lo, hi = self.sweep[0] / 10, self.sweep[1] * 10
         else:
             lo, hi = self.f0 / 100, self.f0 * 100
+        if nl is not None and extend:           # reach the op-amps' own bandwidth limit (used by opamp_limit only)
+            gbws = [float(e.tail[2]) for e in nl.elements if e.type == "a" and len(e.tail) >= 3]
+            if gbws and max(gbws) > 0:
+                hi = max(hi, 10 * max(gbws))
         n = int(math.ceil(math.log10(hi / lo) * POINTS_PER_DECADE)) + 1
         return [lo * (hi / lo) ** (i / (n - 1)) for i in range(n)]
 
@@ -124,7 +131,8 @@ class System:
             elif e.type == "a":
                 ts = terminals(e)
                 inv, non = (ts[1], ts[0]) if int(e.flags) & 1 == 0 else (ts[0], ts[1])
-                self.amps.append((node(inv), node(non), node(ts[2])))
+                gbw = float(e.tail[2]) if len(e.tail) >= 3 else 0.0     # CircuitJS stores GBW (Hz) after the rails
+                self.amps.append((node(inv), node(non), node(ts[2]), gbw if gbw > 0 else 0.0))
         self.devices = []                       # (node ids of the 3 pins, 3x3 small-signal Jacobian)
         self.op = None
         if any(e.type in ("t", "f", "d", "z") for e in nl.elements):
@@ -152,12 +160,21 @@ class System:
                 for tj, j in enumerate(nodes3):
                     if i is not None and j is not None:
                         A[i][j] += J[ti][tj]
-        for k, (inv, non, out) in enumerate(self.amps):
+        for k, (inv, non, out, gbw) in enumerate(self.amps):
             row = self.n + k
-            if inv is not None:
-                A[row][inv] += 1
-            if non is not None:
-                A[row][non] -= 1
+            if gbw and out is not None:
+                # one-pole open-loop gain a(s) = A0 / (1 + s/wp), wp = 2*pi*GBW/A0:  Vout = a(s) (V+ - V-)
+                a = OPAMP_A0 / (1 + 1j * w / (2 * math.pi * gbw / OPAMP_A0))
+                A[row][out] += 1
+                if inv is not None:
+                    A[row][inv] += a
+                if non is not None:
+                    A[row][non] -= a
+            else:                               # ideal: V+ = V- (virtual short)
+                if inv is not None:
+                    A[row][inv] += 1
+                if non is not None:
+                    A[row][non] -= 1
             if out is not None:
                 A[out][row] += 1
         srow = size - 1
@@ -291,6 +308,7 @@ class Analysis:
     f_notch: float | None = None
     depth_db: float | None = None
     source_amp: float | None = None                       # peak volts of the driving source in this analysis
+    opamp_hi: float | None = None                         # -3 dB frequency set by op-amp bandwidth, above the swept range
     headroom: list = field(default_factory=list)          # (peak, limit) of every op-amp at/over 90% of its limit
     comparator: dict | None = None                        # facts about a Schmitt trigger / comparator in the chain
     static: dict | None = None                            # facts about a chain that starts with a DAC (DC levels)
@@ -308,8 +326,8 @@ class Analysis:
         if not self.supported:
             return ("Computed response: NOT ANALYSED (" + self.reason + "). Say plainly that the "
                     "chain's response could not be checked by code.")
-        out = ["Computed response of the whole chain (code-computed; linear parts, ideal op-amp "
-               "with no bandwidth limit; other inputs held at 0):"] + ["  " + l for l in self.lines]
+        out = ["Computed response of the whole chain (code-computed; linear parts, single-pole op-amp "
+               "(gain-bandwidth from the netlist); other inputs held at 0):"] + ["  " + l for l in self.lines]
         out.append("Flags (code-computed, not opinions; relay and explain each, never recompute):"
                    if self.flags else "Flags: none raised.")
         out += ["  - " + f for f in self.flags]
@@ -388,7 +406,7 @@ def _what_if_buffered(stages, freqs, drv, m, flags, lines):
 def _stage_metrics(s: Stage):
     try:
         drv = find_driver(s.nl)
-        freqs = drv.grid()
+        freqs = drv.grid(s.nl)
         out = s.ports.outputs[0].node
         c = _curve(s.nl, drv, freqs, [out])[out]
         return metrics(freqs, [abs(v) for v in c])
@@ -533,7 +551,7 @@ def _analyse_comparator(stages, comp, k: int, amp_index: int) -> Analysis:
         lim = abs(float(stg.nl.elements[amp_index].tail[0]))
         nl = comp.netlist
         drv = find_driver(nl)
-        freqs = drv.grid()
+        freqs = drv.grid(nl)
         op = operating_point(nl, ignore_amps=True) if any(e.type in ("t", "f", "d", "z") for e in nl.elements) \
             else operating_point(nl)
         if k == 0:
@@ -686,7 +704,7 @@ def _analyse_adc(stages: list[Stage]) -> Analysis:
             dx, dy = comp_sub.offsets[-1]
             o = sub[-1].ports.outputs[0].node
             out_node = (o[0] + dx, o[1] + dy)
-            freqs = drv.grid()
+            freqs = drv.grid(nl)
             mags = [abs(sysm.v(sysm.solve(f), out_node)) for f in freqs]
             k = max(range(len(mags)), key=mags.__getitem__)
             peak = drv.amp * mags[k]
@@ -921,6 +939,32 @@ def _other_sources(nl, comp, drv, out_node, flags) -> None:
                      f"of both signals.")
 
 
+def opamp_limit(nl: Netlist, drv: Driver, out_node, peak: float, f_from: float) -> float | None:
+    """Frequency above the swept range where the op-amps' gain-bandwidth limit brings the chain response
+    down by 3 dB from `peak` (None if there is no op-amp bandwidth or the response never falls that far)."""
+    gbws = [float(e.tail[2]) for e in nl.elements if e.type == "a" and len(e.tail) >= 3 and float(e.tail[2]) > 0]
+    if not gbws or peak <= 0:
+        return None
+    try:
+        sysm = System(nl, drv)
+    except NotAnalysable:
+        return None
+    hi = 30 * max(gbws)
+    n = int(math.ceil(math.log10(hi / f_from) * 40)) + 1
+    prev_f, prev_m = None, None
+    thr = peak / math.sqrt(2)
+    for i in range(n):
+        f = f_from * (hi / f_from) ** (i / (n - 1))
+        mag = abs(sysm.v(sysm.solve(f), out_node))
+        if mag < thr:
+            if prev_f is None:
+                return f
+            t = (thr - prev_m) / (mag - prev_m)
+            return math.exp(math.log(prev_f) + t * (math.log(f) - math.log(prev_f)))
+        prev_f, prev_m = f, mag
+    return None
+
+
 def _analyse_chain(stages: list[Stage], comp: Composite) -> Analysis:
     nl = comp.netlist
     for k, st_ in enumerate(stages):
@@ -943,7 +987,7 @@ def _analyse_chain(stages: list[Stage], comp: Composite) -> Analysis:
     except (ValueError, IndexError) as e:                # malformed numbers etc.
         return Analysis(False, f"could not read source/element values: {e}")
 
-    freqs = drv.grid()
+    freqs = drv.grid(nl)
     dx, dy = comp.offsets[-1]
     o = stages[-1].ports.outputs[0].node
     out_node = (o[0] + dx, o[1] + dy)
@@ -977,6 +1021,12 @@ def _analyse_chain(stages: list[Stage], comp: Composite) -> Analysis:
             band += (f"; notch near {fmt(m.f_notch, 'Hz')} ({fmt(m.stop[0], 'Hz')} to {fmt(m.stop[1], 'Hz')}, "
                      f"{depth_text(m.depth_db)})")
         lines.append(f"shape: {m.shape}; passband gain {m.peak:.3g} (peak near {fmt(m.f_peak, 'Hz')}); {band}")
+    opamp_hi = None
+    if not m.sloping and m.hi is None and m.stop is None:
+        opamp_hi = opamp_limit(nl, drv, out_node, m.peak, freqs[-1])
+        if opamp_hi:
+            lines.append(f"op-amp bandwidth: above the swept range the op-amps' gain-bandwidth product brings the "
+                         f"response down by 3 dB near {fmt(opamp_hi, 'Hz')}")
     lines.append(f"driving source: {fmt(drv.amp, 'V')} peak, "
                  + (f"sweeping {fmt(drv.sweep[0], 'Hz')} to {fmt(drv.sweep[1], 'Hz')}" if drv.sweep
                     else f"fixed {fmt(drv.f0, 'Hz')}"))
@@ -1087,5 +1137,6 @@ def _analyse_chain(stages: list[Stage], comp: Composite) -> Analysis:
     res.worst_load = min(worsts) if worsts else None
     res.stop, res.f_notch, res.depth_db = m.stop, m.f_notch, m.depth_db
     res.source_amp = drv.amp
+    res.opamp_hi = opamp_hi
     res.headroom = headroom
     return res

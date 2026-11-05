@@ -1,7 +1,7 @@
 """Computed response of a two-branch parallel circuit (see graph.py).
 
-Same solver and the same scope statement as analysis.py: linear parts, ideal op-amp
-(no gain-bandwidth limit), other inputs held at 0. Everything is calculated by code;
+Same solver and the same scope statement as analysis.py: linear parts, single-pole op-amp
+(its gain-bandwidth product from the netlist), other inputs held at 0. Everything is calculated by code;
 the language model is only told to relay it.
 """
 
@@ -33,7 +33,7 @@ def analyse_parallel(par: Parallel, names: list[list[str]]) -> Analysis:
     except (ValueError, IndexError) as e:
         return Analysis(False, f"could not read source/element values: {e}")
 
-    freqs = drv.grid()
+    freqs = drv.grid(nl)
     amp_nodes = [(i, terminals(e)[2], e) for i, e in enumerate(nl.elements) if e.type == "a"]
     o_nodes = [(e.x1, e.y1) for e in nl.elements if e.type == "O"]
     pts = [par.sum_out, *par.exits, *[n for _, n, _ in amp_nodes], *o_nodes]
