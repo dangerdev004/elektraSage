@@ -18,8 +18,8 @@ from dotenv import load_dotenv
 from ollama import Client, ChatResponse
 
 from agent.circuits import CIRCUIT_TOOLS
-from agent.cascade.tool import (INTERNAL, cascade, parallel_difference, parallel_sum, render_number,
-                                render_single)
+from agent.cascade.tool import (INTERNAL, cascade, digital_cascade, parallel_difference, parallel_sum,
+                                render_number, render_single)
 
 load_dotenv()
 
@@ -64,7 +64,7 @@ def build_without_buffers() -> str:
     raise ValueError("build_without_buffers runs through execute_tool_call")
 
 
-available_functions = {fn.__name__: fn for fn in [*CIRCUIT_TOOLS, cascade, parallel_sum,
+available_functions = {fn.__name__: fn for fn in [*CIRCUIT_TOOLS, cascade, digital_cascade, parallel_sum,
                                                    parallel_difference, apply_fix, build_without_buffers]}
 
 SYSTEM_PROMPT = """You are a circuit-parameter extraction assistant.
@@ -105,6 +105,8 @@ Rules:
   parameters from it; ask for any that are missing, never invent values.
   Restate the plan in one line in your reply, e.g. "Cascade: RC high-pass
   100 Hz -> RC low-pass 5 kHz -> inverting amp x10".
+- If the user wants DIGITAL blocks chained (a counter, SIPO/PISO shift register, DAC or flash ADC driving
+  another of these), call `digital_cascade` ONCE. Its reply is written by code; do not add to it.
 - After `cascade` succeeds you also receive a fact sheet containing a
   code-computed block ("Computed response of the whole chain") and "Flags".
   Report those figures exactly as given: never recompute, re-round or

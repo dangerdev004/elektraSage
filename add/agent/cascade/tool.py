@@ -137,7 +137,7 @@ def _fact_sheet(stages: list[Stage], comp: Composite, analysis: Analysis) -> str
                + (", ".join(fixers) if fixers else
                   "NONE for loading - no buffer/follower circuit is registered yet. Do not offer "
                   "to add one; describe it as a change the user would make by hand or request later."))
-    out.append("Not covered even by the computed block: op-amp bandwidth and slew, clipping inside "
+    out.append("Not covered even by the computed block: op-amp slew rate, clipping inside "
                "the response curve (only the peak-versus-limit line checks it), component "
                "tolerances. Scope vertical scales after stage 1 were sized for each stage's own "
                "standalone source and may be off. Stage hint labels such as 'f.3db' were removed "
@@ -519,7 +519,7 @@ def _render_reply(stages: list[dict], built: list[Stage], comp: Composite, analy
                 if fixout is not None:
                     fixout["call"] = ("cascade", {"stages": stages, "source_amplitude": hf[0]})
     out += ([""] + notes) if notes else []
-    out += ["", "_Not modelled: op-amp bandwidth and slew, tolerances. Output scopes were rescaled "
+    out += ["", "_Not modelled: op-amp slew rate, tolerances. Output scopes were rescaled "
             "from the computed peaks. Written by code, not by the language model._"]
     return "\n".join(out)
 
@@ -985,7 +985,7 @@ def _render_parallel_reply(branches, gain, built, summer, par, analysis, fixout:
                 if fixout is not None:
                     fixout["call"] = (tool, _call_args(branches, gain, weights, source_amplitude=hf[0]))
     out += ([""] + notes) if notes else []
-    out += ["", "_Not modelled: op-amp bandwidth and slew, tolerances. Output scopes were rescaled "
+    out += ["", "_Not modelled: op-amp slew rate, tolerances. Output scopes were rescaled "
             "from the computed peaks. Written by code, not by the language model._"]
     return "\n".join(out)
 
@@ -1062,6 +1062,12 @@ def parallel_difference(branches: list[list[dict]], gain_v_per_v: float = 1.0,
     return _difference_impl(branches, gain_v_per_v, True, source_amplitude)
 
 
+def digital_cascade(stages: list[dict], clock_hz: float | None = None) -> tuple[str, str]:
+    """PLACEHOLDER - the real docstring is built at import time (see below)."""
+    from .digital_chain import digital_cascade as _impl
+    return _impl(stages, clock_hz)
+
+
 # The model never sees `auto_buffer`: only code (the "build it without the buffers" follow-up)
 # may switch the automatic buffering off, so it cannot be turned off by a stray model argument.
 INTERNAL = {"cascade": _cascade_impl, "parallel_sum": _parallel_impl, "parallel_difference": _difference_impl}
@@ -1095,7 +1101,12 @@ def _finish_docstring() -> None:
     leave them at their defaults.
 
     Rules: only the first stage may be a source/generator (oscillator, 555) - every later stage
-    must take an input. The first stage's source drives the whole chain. Digital circuits
+    must take an input. The first stage's source drives the whole chain. The flash ADC
+    (flash_adc) CAN be cascaded: it is accepted as the LAST stage after any analog stages
+    (nothing may follow it, because its outputs are digital). Its own triangle-wave test input
+    (the input_frequency argument) is removed automatically and replaced by the previous
+    stage's output, so it does NOT generate its own signal when cascaded; never refuse a
+    chain because flash_adc has an input_frequency argument. Other digital circuits
     (counters, shift registers) cannot be cascaded yet, and circuits from different file formats
     (555 / square-wave / shift registers versus the rest) cannot be mixed yet.
 
@@ -1177,4 +1188,48 @@ def _finish_docstring() -> None:
     """
 
 
+def _finish_digital_docstring() -> None:
+    from .digital_chain import working_links
+    LINKS = working_links()
+    pairs = "\n      ".join(f"{a} -> {b}" + (" (serial bit)" if k == "serial" else " (bit bus)")
+                          for (a, b), k in sorted(LINKS.items()))
+    digital_cascade.__doc__ = f"""Cascade DIGITAL blocks (counter, shift registers, DACs, flash ADC) into ONE circuit.
+
+    Use this, not `cascade`, when the user wants a counter, SIPO or PISO shift register, a DAC or a
+    flash ADC chained with another of these (e.g. "a 4-bit counter driving an R-2R DAC"). Code joins
+    the generators' own circuits and checks the result; you only choose the blocks and their
+    parameters. Never invent values; ask for missing REQUIRED ones. The reply is written by code.
+
+    Allowed connections (the first block of a pair drives the second; every block takes its input
+    from the one before it):
+      {pairs}
+    Bit buses must have the same width on both sides (a counter's bits must equal the DAC's bits).
+    Only blocks in the same CircuitJS file format can be joined: the counter, DACs and ADC are one
+    format, the shift registers another, so a counter cannot yet drive a PISO or a shift register. If the pair is not
+    in the list, or the formats differ, tell the user it is not supported yet - never improvise a
+    substitute. The first block's own clock drives the chain (set `clock_hz` only if the user asks
+    for a clock frequency). A flash ADC used here keeps its own test input (this is not the analog
+    chain; to put analog stages before an ADC use `cascade`).
+
+    Available blocks and their arguments:
+      binary_counter: REQUIRED bits
+      sipo_shift_register: REQUIRED bits
+      piso_shift_register: REQUIRED bits; optional (have defaults): initial_values
+      r2r_dac: optional (have defaults): bits=4, reference_voltage=16.0, ladder_resistance=50000.0, output_step, feedback_resistance, code
+      binary_weighted_dac: optional (have defaults): bits=4, msb_resistance=100.0, output_step, feedback_resistance, code, logic_high_voltage=5.0
+      flash_adc: optional (have defaults): bits=3, reference_voltage=5.0, input_frequency=20.0, ladder_resistor=1000.0
+
+    Args:
+        stages: Ordered list, first stage first, at least two. Each item is a dict
+            {{"circuit": "<block name>", "args": {{<that block's own arguments>}}}},
+            e.g. [{{"circuit": "binary_counter", "args": {{"bits": 4}}}},
+            {{"circuit": "r2r_dac", "args": {{"bits": 4}}}}].
+        clock_hz: Frequency of the chain's clock in hertz. Leave it out unless the user states one.
+
+    Returns:
+        The combined circuit text plus a note on what was joined and checked.
+    """
+
+
 _finish_docstring()
+_finish_digital_docstring()
