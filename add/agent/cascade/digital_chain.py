@@ -12,12 +12,13 @@ a free horizontal channel, checked so that it never passes through another eleme
 After joining, a structural check confirms that the only connections between the two blocks are the intended
 ones (the same idea as compose.verify).
 
-Only blocks written in the SAME CircuitJS file format can be joined (the counter, DACs and ADC are legacy;
-the SIPO and PISO are xml). compose.py refuses mixed formats for the same reason, and no converter exists.
+The SIPO and PISO generators write the xml file format, which this repo's CircuitJS cannot load (a blank screen), so
+they are converted to the legacy format first (to_legacy); every block is then legacy and any listed pair can join.
 """
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 
 from . import digital
@@ -26,6 +27,62 @@ from .digital import CHIPS_D, CHIPS_JK, CHIPS_MUX, Sim, chip_pins, input_level, 
 
 GAP = 96
 LANE = 16
+
+
+# --------------------------------------------------------------------------- file format
+def _escape(text: str) -> str:
+    """CircuitJS text-element escaping (CustomLogicModel.escape in the repo's CircuitJS)."""
+    if not text:
+        return "\\0"
+    return (text.replace("\\", "\\\\").replace("\n", "\\n").replace(" ", "\\s").replace("+", "\\p")
+            .replace("=", "\\q").replace("#", "\\h").replace("&", "\\a").replace("\r", "\\r"))
+
+
+_XML_TO_LEGACY = {"DFlipFlop": "155", "mux": "184", "I": "I", "L": "L", "M": "M", "R": "R", "w": "w", "x": "x"}
+
+
+def to_legacy(nl: Netlist) -> Netlist:
+    """Rewrite an xml-format netlist in the legacy line format.
+
+    The repo's CircuitJS build has no XML loader (CirSim.readCircuit only parses legacy lines), so the xml the
+    SIPO / PISO generators write shows up as a blank screen. Only the element kinds those two generators use
+    are converted; the token orders come from this repo's element classes (ChipElm.dump, MultiplexerElm.dump,
+    InverterElm.dump, LogicInputElm / SwitchElm.dump, LogicOutputElm.dump, TextElm.dump, VoltageElm).
+    Anything else raises, so nothing is guessed."""
+    if nl.dialect != "xml":
+        return nl
+    out: list[Element] = []
+    for e in nl.elements:
+        a = e.attrs or {}
+        t = _XML_TO_LEGACY.get(e.type)
+        if t is None:
+            raise ValueError(f"cannot convert xml element <{e.type}> to the legacy format")
+        if e.type == "DFlipFlop":
+            tail = ["0.0"]                                       # volts of the one stateful pin (Q)
+        elif e.type == "mux":
+            tail = [a.get("se", "2")]                            # number of select bits
+        elif e.type == "I":
+            tail = [a.get("sl", "0.5"), a.get("hi", "5")]
+        elif e.type == "L":
+            tail = [a.get("p", "0"), "false", "5.0", "0.0"]      # position, momentary, high, low
+        elif e.type == "M":
+            tail = ["2.5"]                                       # threshold
+        elif e.type == "R":
+            tail = [a.get("wf", "0"), a.get("fr", "40"), a.get("maxv", "5"), a.get("bias", "0")]
+        elif e.type == "x":
+            tail = [a.get("si", "24"), _escape(a.get("te", ""))]
+        else:
+            tail = []
+        out.append(Element(t, e.x1, e.y1, e.x2, e.y2, e.flags, tail, None))
+    ra = nl.root_attrs
+    header = "$ " + " ".join([ra.get("f", "1"), repr(float(ra.get("ts", "5e-6"))), ra.get("ic", "10.2"),
+                              ra.get("cb", "50"), ra.get("vr", "5.0")])
+    return Netlist(dialect="legacy", header=header, options=[], elements=out, scopes=[], hints=[])
+
+
+def load_block(text: str) -> Netlist:
+    """Parse a generator's output; xml circuits are converted so every block is in the loadable legacy format."""
+    return to_legacy(parse(text))
 
 
 # --------------------------------------------------------------------------- block ports
@@ -40,6 +97,14 @@ class Block:
     serial_in: int | None = None                             # element index of the `L`
     load: int | None = None                                  # PISO load/shift toggle (element index)
     clock: int | None = None                                 # element index of the square-wave `R`
+    serial_in_pt: Point | None = None                        # where a serial bit enters (an `L` toggle pin or a mux pin)
+    load_pt: Point | None = None                             # pin of the load/shift toggle (kept even once it is removed)
+    carry_out: Point | None = None                           # counter: last Q, which can clock a further counter
+    carry_in: bool = False                                   # counter: its clock pin can be driven by a carry
+    first_q: Point | None = None                             # Q of the first flip-flop (for the serial-link checks)
+    select_pt: Point | None = None                           # PISO: the first mux's select pin (low = shifting)
+    ff_q: list[Point] = field(default_factory=list)          # Q pin of every D flip-flop, first to last (by position)
+    clock_tap: Point | None = None                           # a point on the shared clock net a later block can wire to
 
 
 def _clock_index(nl: Netlist) -> int | None:
@@ -59,12 +124,20 @@ def ports_of(name: str, nl: Netlist) -> Block:
     """Typed ports of one of the supported blocks, taken from the generator's own conventions."""
     b = Block(name, nl, clock=_clock_index(nl))
     els = nl.elements
+    b.clock_tap = els[b.clock].p1 if b.clock is not None else None
     if name in ("binary_counter", "sipo_shift_register"):
         ms = sorted(_markers(nl), key=lambda i: (els[i].x1, els[i].y1))      # first stage (bit 0) leftmost
         b.out_bits = [els[i].p1 for i in ms]
+        b.first_q = b.out_bits[0] if b.out_bits else None
+        b.ff_q = [chip_pins(e)["q"] for e in sorted((e for e in els if e.type in CHIPS_D), key=lambda e: e.x1)]
+        if name == "binary_counter":
+            b.carry_out = b.out_bits[-1] if b.out_bits else None
+            b.carry_in = b.clock is not None
         if name == "sipo_shift_register":
             t = _toggles(nl)
             b.serial_in = t[0] if len(t) == 1 else None
+            b.serial_in_pt = els[b.serial_in].p1 if b.serial_in is not None else None
+            b.serial_out = b.out_bits[-1] if b.out_bits else None        # its last Q can feed another register
     elif name == "piso_shift_register":
         sim = Sim(nl)
         inv_in = {sim.net(e.p1) for e in els if e.type == "I"}
@@ -73,6 +146,15 @@ def ports_of(name: str, nl: Netlist) -> Block:
             (ld if sim.net(els[i].p1) in inv_in else par).append(i)
         b.in_bits = sorted(par, key=lambda i: els[i].x1)                    # first mux = bit 0
         b.load = ld[0] if len(ld) == 1 else None
+        b.load_pt = els[b.load].p1 if b.load is not None else None
+        muxes = sorted((e for e in els if e.type in CHIPS_MUX), key=lambda e: e.x1)
+        dffs = sorted((e for e in els if e.type in CHIPS_D), key=lambda e: e.x1)
+        if muxes:
+            b.serial_in_pt = chip_pins(muxes[0])["r0"]                      # the first stage's free input
+            b.select_pt = chip_pins(muxes[0])["s"]
+        if dffs:
+            b.first_q = chip_pins(dffs[0])["q"]
+        b.ff_q = [chip_pins(e)["q"] for e in dffs]
         ms = _markers(nl)
         b.serial_out = els[ms[0]].p1 if len(ms) == 1 else None
     elif name in ("r2r_dac", "binary_weighted_dac"):
@@ -169,6 +251,7 @@ class Chain:
     links: list[str]
     dropped: list[str]
     problems: list[str] = field(default_factory=list)
+    kinds: list[str] = field(default_factory=list)       # link kind of each join: bits | serial | carry
 
 
 def _new_wire(a: Point, b: Point, dialect: str) -> Element:
@@ -185,16 +268,17 @@ def _group_pins(els: list[Element]) -> dict[int, set[Point]]:
 
 def join(up: Chain, name: str, down_nl: Netlist, link: str) -> Chain:
     """Append one block (`name`) to the chain's last block through `link` ('bits', 'serial')."""
-    if down_nl.dialect != up.netlist.dialect:
-        raise ValueError(
-            f"cannot join {name} ({down_nl.dialect} format) to {up.blocks[-1].name} ({up.netlist.dialect} format): "
-            "CircuitJS cannot load a mix of its two file formats and no converter exists yet")
     last = up.blocks[-1]
+    down_nl = to_legacy(down_nl)
+    if down_nl.dialect != up.netlist.dialect:
+        raise ValueError(f"cannot join {name} ({down_nl.dialect} format) to {last.name} ({up.netlist.dialect} format)")
     down = ports_of(name, down_nl)
+    _init_piso(name, down)
     dialect = up.netlist.dialect
 
-    # --- links as (source point, target element index in `down`) --------------------
-    pairs: list[tuple[Point, int]] = []
+    # --- wires to add: (source point in the chain, target point in `down`, label) -----------------
+    wanted: list[tuple[Point, Point, str]] = []
+    drop: set[int] = set()
     if link == "bits":
         if not last.out_bits:
             raise ValueError(f"{last.name} has no bit outputs")
@@ -203,21 +287,41 @@ def join(up: Chain, name: str, down_nl: Netlist, link: str) -> Chain:
         if len(last.out_bits) != len(down.in_bits):
             raise ValueError(f"width mismatch: {last.name} gives {len(last.out_bits)} bits, {name} takes "
                              f"{len(down.in_bits)}")
-        pairs = list(zip(last.out_bits, down.in_bits))
+        for s_, i in zip(last.out_bits, down.in_bits):
+            wanted.append((s_, down_nl.elements[i].p1, f"{last.name} bit -> {name}"))
+            drop.add(i)
     elif link == "serial":
-        if last.serial_out is None or down.serial_in is None:
+        if last.serial_out is None or down.serial_in_pt is None:
             raise ValueError(f"{last.name} -> {name}: no serial output / serial input to join")
-        pairs = [(last.serial_out, down.serial_in)]
+        wanted.append((last.serial_out, down.serial_in_pt, f"{last.name} serial -> {name}"))
+        if down.serial_in is not None:
+            drop.add(down.serial_in)
+        if last.name == name == "piso_shift_register" and last.load_pt is not None and down.load is not None:
+            drop.add(down.load)                       # both registers load and shift together
+            wanted.append((last.load_pt, down.load_pt, "shared load/shift"))
+    elif link == "carry":
+        if last.carry_out is None or not down.carry_in or down.clock is None:
+            raise ValueError(f"{last.name} -> {name}: no carry output / clock input to join")
+        wanted.append((last.carry_out, down_nl.elements[down.clock].p1, f"{last.name} carry -> {name} clock"))
+        drop.add(down.clock)
     else:
         raise ValueError(f"unknown link {link!r}")
 
-    drop = {i for _, i in pairs}
-    dropped = [f"{name}: manual input toggle at {down_nl.elements[i].p1}" for i in sorted(drop)]
+    dropped = [f"{name}: manual input toggle at {down_nl.elements[i].p1}" for i in sorted(drop)
+               if down_nl.elements[i].type == "L"]
+    tap = next((b.clock_tap for b in reversed(up.blocks) if b.clock_tap is not None), None)   # nearest point on the shared clock
     clock_target = None
-    if down.clock is not None and last.clock is not None:
+    if link != "carry" and down.clock is not None and tap is not None:
         drop.add(down.clock)
         clock_target = down_nl.elements[down.clock].p1
         dropped.append(f"{name}: own clock rail at {clock_target} (the first block's clock drives it)")
+    # text labels that named a toggle which is now wired to the previous block ("inputs", "load/shift")
+    for j, e in enumerate(down_nl.elements):
+        if e.type == "x" and len(e.tail) > 1:
+            if e.tail[1] == "inputs" and down.in_bits and all(i in drop for i in down.in_bits):
+                drop.add(j)
+            elif e.tail[1] == "load/shift" and down.load is not None and down.load in drop:
+                drop.add(j)
     keep = [i for i in range(len(down_nl.elements)) if i not in drop]
 
     left, right, _ = _bounds(up.netlist.elements)
@@ -233,11 +337,9 @@ def join(up: Chain, name: str, down_nl: Netlist, link: str) -> Chain:
     wires = [(e.p1, e.p2) for e in combined if e.type == "w"]
     used: list[tuple[Point, Point]] = []
 
-    targets = [(s, (down_nl.elements[i].p1[0] + dx, down_nl.elements[i].p1[1] + dy), f"{last.name} bit -> {name}")
-               for s, i in pairs]
-    if clock_target is not None and last.clock is not None:
-        targets.append((up.netlist.elements[last.clock].p1,
-                        (clock_target[0] + dx, clock_target[1] + dy), "shared clock"))
+    targets = [(s_, (t[0] + dx, t[1] + dy), what) for s_, t, what in wanted]
+    if clock_target is not None:
+        targets.append((tap, (clock_target[0] + dx, clock_target[1] + dy), "shared clock"))
 
     new_wires: list[Element] = []
     desc: list[str] = []
@@ -270,9 +372,17 @@ def join(up: Chain, name: str, down_nl: Netlist, link: str) -> Chain:
     placed.serial_in = imap.get(down.serial_in) if down.serial_in is not None else None
     placed.load = imap.get(down.load) if down.load is not None else None
     placed.clock = imap.get(down.clock) if down.clock is not None else None
+    for f_ in ("serial_in_pt", "load_pt", "carry_out", "first_q", "select_pt"):
+        v = getattr(down, f_)
+        setattr(placed, f_, shift(v) if v is not None else None)
+    placed.ff_q = [shift(p) for p in down.ff_q]
+    placed.clock_tap = shift(clock_target) if clock_target is not None else (
+        shift(down.clock_tap) if (down.clock_tap is not None and placed.clock is not None) else None)
+    placed.carry_in = down.carry_in
 
-    chain = Chain(out, up.blocks + [placed], up.links + desc, up.dropped + dropped, list(up.problems))
-    chain.problems += verify_join(up.netlist.elements, moved, combined, pairs, targets, dx, dy)
+    chain = Chain(out, up.blocks + [placed], up.links + desc, up.dropped + dropped, list(up.problems),
+                  up.kinds + [link])
+    chain.problems += verify_join(up.netlist.elements, moved, combined, None, targets, dx, dy)
     return chain
 
 
@@ -314,9 +424,18 @@ def verify_join(up_els, moved, combined, pairs, targets, dx, dy) -> list[str]:
     return problems
 
 
+def _init_piso(name: str, b: Block) -> None:
+    """In this CircuitJS the mux selects input 0 (the previous stage) when its select is low, and the select is the
+    inverted load/shift toggle - so toggle = 0 LOADS the parallel inputs and toggle = 1 SHIFTS. Start in load mode."""
+    if name == "piso_shift_register" and b.load is not None:
+        b.nl.elements[b.load].tail[0] = "0"
+
+
 def start(name: str, nl_text: str) -> Chain:
-    nl = parse(nl_text)
-    return Chain(nl, [ports_of(name, nl)], [], [])
+    nl = load_block(nl_text)
+    b = ports_of(name, nl)
+    _init_piso(name, b)
+    return Chain(nl, [b], [], [])
 
 
 # --------------------------------------------------------------------------- checks
@@ -391,7 +510,7 @@ def check_serial_link(chain: Chain, n: int) -> list[str]:
     word = [(i * 5 + 1) % 3 != 0 for i in range(n)]       # a fixed, non-trivial word (bit i)
     for i, v in zip(piso.in_bits, word):
         sim.drive[i] = (lambda v: lambda t: int(v))(v)
-    sim.drive[piso.load] = lambda t: 1 if t < 1.5 * T else 0
+    sim.drive[piso.load] = lambda t: 0 if t < 1.5 * T else 1      # 0 = load, 1 = shift (see _init_piso)
     edges = n + 1                                           # edge 1 loads, then n shifts; the SIPO takes the last bit on edge n+1
     times = [k * T / 20 + T / 60 for k in range(int((edges + 1) * 20))]
     rows = _sample(sim, times, list(sipo.out_bits))
@@ -399,6 +518,117 @@ def check_serial_link(chain: Chain, n: int) -> list[str]:
     if [bool(b) for b in got] != word:
         return [f"serial link: SIPO holds {got} after {edges} clocks, the PISO was loaded with {[int(w) for w in word]}"]
     return []
+
+
+def _toggle(seed: int, T: float):
+    """Deterministic pseudo-random level for a manual toggle, changing mid-way through the clock's low phase so
+    it is stable at every rising edge."""
+    def f(t: float) -> int:
+        j = int((t + 0.25 * T) / T + 1e-9)
+        return ((j * 2654435761 + seed * 40503) >> 7) & 1
+    return f
+
+
+def check_links(chain: Chain) -> tuple[dict[str, list[str]], list[str]]:
+    """One functional check per link of the whole chain, on the finished netlist, with every manual toggle that is
+    left driven by a pseudo-random pattern. Returns ({link label: problems}, notes about what was not exercised).
+
+    bits   - the sink's physical pins, weighted by position, must read the same number as the source's bits
+    serial - after every rising edge the sink's first flip-flop holds what the source's serial output held just
+             before it (a PISO sink is only judged while its select line is in shift mode)
+    carry  - the downstream counter steps by one exactly when the upstream counter wraps, and never otherwise
+    """
+    checks: dict[str, list[str]] = {}
+    notes: list[str] = []
+    if not chain.kinds:
+        return checks, notes
+    master = next((b.clock for b in chain.blocks if b.clock is not None), None)
+    f = rail_params(chain.netlist.elements[master])[1] if master is not None else 100.0
+    T = 1.0 / f
+    sim = Sim(chain.netlist)
+    seed = 1
+    for b in chain.blocks:
+        for i in list(b.in_bits) + [x for x in (b.serial_in, b.load) if x is not None]:
+            seed += 1
+            sim.drive[i] = _toggle(seed, T)
+
+    need = 24
+    for i, k in enumerate(chain.kinds):
+        if k == "carry":
+            n = len(chain.blocks[i].out_bits)
+            need = max(need, 2 * 2 ** min(n, 10) + 2)
+    pts: list[Point] = []
+    for b in chain.blocks:
+        for p in list(b.out_bits) + list(b.in_pts) + [b.serial_out, b.first_q, b.select_pt] + b.ff_q[:1] + b.ff_q[-1:]:
+            if p is not None and p not in pts:
+                pts.append(p)
+    index = {p: j for j, p in enumerate(pts)}
+    times = [0.0]
+    for k in range(1, need + 1):
+        times += [k * T - T / 8, k * T + T / 8]            # just before and just after rising edge k
+    rows = _sample(sim, times, pts)
+    col = lambda p, r: r[index[p]]
+
+    for i, kind in enumerate(chain.kinds):
+        a, b = chain.blocks[i], chain.blocks[i + 1]
+        label = f"link {i + 1} ({_PRETTY.get(a.name, a.name)} -> {_PRETTY.get(b.name, b.name)}, {kind})"
+        bad: list[str] = []
+        seen: set = set()
+        if a.name == "flash_adc":
+            notes.append(f"{label}: the flash ADC's comparators are not simulated, so only the wiring was checked "
+                         "structurally; its bit order is taken from the generator's marker order.")
+            continue
+        if kind == "bits":
+            w_dn = _sink_weights(b)
+            n = len(a.out_bits)
+            for t, r in zip(times, rows):
+                c_up = _code([col(p, r) for p in a.out_bits])
+                c_dn = sum(w for w, p in zip(w_dn, b.in_pts) if col(p, r))
+                seen.add(c_up)
+                if c_up != c_dn:
+                    bad.append(f"{b.name} reads code {c_dn} where {a.name} holds {c_up} at t={t:.4f}s "
+                               "(bits are wired in the wrong order)")
+                    break
+        elif kind == "serial":
+            shifting_only = b.name == "piso_shift_register"
+            judged = 0
+            if shifting_only and a.name == b.name:             # one long register: both must load and shift together
+                for t, r in zip(times, rows):
+                    if col(a.select_pt, r) != col(b.select_pt, r):
+                        bad.append(f"the two registers' load/shift selects differ at t={t:.4f}s (not tied together)")
+                        break
+            for k in range(1, need + 1):
+                pre, post = rows[2 * k - 1], rows[2 * k]
+                if shifting_only and col(b.select_pt, pre):
+                    continue                                   # that edge loads instead of shifting
+                judged += 1
+                src, got = col(a.ff_q[-1], pre), col(b.ff_q[0], post)      # judged on the physical flip-flops
+                seen.add(src)
+                if src != got:
+                    bad.append(f"after edge {k} the sink's first flip-flop holds {got}, the source held {src}")
+                    break
+            if not judged:
+                notes.append(f"{label}: no clock edge fell in shift mode during the check, so nothing was judged.")
+                continue
+        elif kind == "carry":
+            na, nb = len(a.out_bits), len(b.out_bits)
+            prev = None
+            for r in rows[1:]:
+                ca, cb = _code([col(p, r) for p in a.out_bits]), _code([col(p, r) for p in b.out_bits])
+                seen.add(ca)
+                if prev is not None and (ca, cb) != prev:
+                    pa, pb = prev
+                    want = (pb + 1) % (2 ** nb) if (pa == 2 ** na - 1 and ca == 0) else pb
+                    if cb != want:
+                        bad.append(f"upstream went {pa} -> {ca} but the downstream counter went {pb} -> {cb} "
+                                   f"(expected {want})")
+                        break
+                prev = (ca, cb)
+        if not bad and len(seen) < 2:
+            notes.append(f"{label}: the source never changed during the check, so the link was not exercised.")
+            continue
+        checks[label] = bad
+    return checks, notes
 
 
 FLAGS_ZERO_DELAY = ("Checked with an ideal zero-delay logic model: propagation delay, ripple-counter glitches and "
@@ -416,7 +646,7 @@ _PRETTY = {"binary_counter": "binary counter", "sipo_shift_register": "SIPO shif
            "binary_weighted_dac": "binary-weighted DAC", "flash_adc": "flash ADC"}
 
 
-def build_reply(chain: Chain, checks: dict[str, list[str]]) -> str:
+def build_reply(chain: Chain, checks: dict[str, list[str]], warns: list[str] | None = None) -> str:
     names = " -> ".join(_PRETTY.get(b.name, b.name) for b in chain.blocks)
     lines = [f"Digital cascade: {names}.", ""]
     lines.append("The blocks are your existing generators, joined by wires between their exact pins. "
@@ -429,6 +659,9 @@ def build_reply(chain: Chain, checks: dict[str, list[str]]) -> str:
     if chain.problems:
         lines.append("")
         lines += [f"- Wiring problem found: {p}" for p in chain.problems]
+    if warns:
+        lines.append("")
+        lines += [f"- {w}" if w.startswith("Not exercised") else f"- Warning from the {w}" for w in warns]
     lines.append("")
     if chain.blocks[0].name == "flash_adc":
         lines.append("Not checked: the ADC's analog input and comparators, and its bit order (taken from the "
@@ -460,60 +693,110 @@ def build_note(chain: Chain, checks: dict[str, list[str]]) -> str:
 
 
 # --------------------------------------------------------------------------- public API
-LINKS = {
-    ("binary_counter", "r2r_dac"): "bits",
-    ("binary_counter", "binary_weighted_dac"): "bits",
-    ("binary_counter", "piso_shift_register"): "bits",
-    ("sipo_shift_register", "piso_shift_register"): "bits",
-    ("sipo_shift_register", "r2r_dac"): "bits",
-    ("sipo_shift_register", "binary_weighted_dac"): "bits",
-    ("piso_shift_register", "sipo_shift_register"): "serial",
-    ("flash_adc", "r2r_dac"): "bits",
-    ("flash_adc", "binary_weighted_dac"): "bits",
-    ("flash_adc", "piso_shift_register"): "bits",
-}
 SUPPORTED = {"binary_counter", "sipo_shift_register", "piso_shift_register", "r2r_dac",
              "binary_weighted_dac", "flash_adc"}
 
+_TO_SERIAL = "To get there insert a piso_shift_register between them (parallel word -> one serial bit)."
+_TO_BITS = "To get there insert a sipo_shift_register between them (one serial bit -> parallel word)."
 
-def block_format(name: str) -> str:
-    """CircuitJS file format ('legacy' or 'xml') a block's generator writes; only same-format blocks can be joined."""
-    from .. import circuits as C
-    return parse(getattr(C, name)(**({"bits": 3} if name != "flash_adc" else {"bits": 2}))).dialect
+
+def link_kind(last: Block, down: Block) -> str:
+    """How `last` can drive `down`, decided only from their typed ports: 'bits' (a parallel bus, LSB first),
+    'serial' (one bit) or 'carry' (a counter's last Q clocking another counter). Raises with the reason otherwise."""
+    if last.out_bits and down.in_bits:
+        return "bits"
+    if last.serial_out is not None and down.serial_in_pt is not None:
+        return "serial"
+    if last.carry_out is not None and down.carry_in:
+        return "carry"
+    if not (last.out_bits or last.serial_out or last.carry_out):
+        raise ValueError(f"{last.name} has no digital output (a DAC's output is analog, so a DAC cannot drive a "
+                         "digital block here; mixed analog/digital chains are not supported yet)")
+    if not (down.in_bits or down.serial_in_pt or down.carry_in):
+        raise ValueError(f"{down.name} has no digital input (a flash ADC's input is analog)")
+    if last.out_bits and down.serial_in_pt is not None:
+        raise ValueError(f"{last.name} gives a parallel word but {down.name} takes ONE serial bit. {_TO_SERIAL}")
+    if last.serial_out is not None and down.in_bits:
+        raise ValueError(f"{last.name} gives ONE serial bit but {down.name} needs a parallel word. {_TO_BITS}")
+    raise ValueError(f"{last.name} and {down.name} have no matching ports")
+
+
+_LINK_TABLE: dict[tuple[str, str], str] | None = None
 
 
 def working_links() -> dict[tuple[str, str], str]:
-    """LINKS that can actually be built today (same file format on both sides)."""
-    return {k: v for k, v in LINKS.items() if block_format(k[0]) == block_format(k[1])}
+    """Every pair of blocks whose ports match (computed from the generators' real ports, not hand-listed)."""
+    global _LINK_TABLE
+    if _LINK_TABLE is None:
+        from .. import circuits as C
+        ports = {}
+        for n in sorted(SUPPORTED):
+            nl = load_block(getattr(C, n)(**({"bits": 3} if n != "flash_adc" else {"bits": 3})))
+            ports[n] = ports_of(n, nl)
+        table = {}
+        for a, pa in ports.items():
+            for b, pb in ports.items():
+                try:
+                    table[(a, b)] = link_kind(pa, pb)
+                except ValueError:
+                    pass
+        _LINK_TABLE = table
+    return dict(_LINK_TABLE)
 
 
 def digital_cascade(stages: list[dict], clock_hz: float | None = None) -> tuple[str, str]:
     """stages: [{"circuit": name, "args": {...}}, ...] -> (CircuitJS text, code-computed note)."""
     from .. import circuits as C
-    if len(stages) < 2:
-        raise ValueError("a digital cascade needs at least two stages")
-    for s in stages:
+    if not isinstance(stages, list) or len(stages) < 2:
+        raise ValueError("a digital cascade needs a list of at least two stages, each "
+                         "{'circuit': <block name>, 'args': {...}}")
+    specs = []
+    for k, s in enumerate(stages, 1):
+        if not isinstance(s, dict) or not isinstance(s.get("circuit"), str):
+            raise ValueError(f"stage {k}: expected {{'circuit': <block name>, 'args': {{...}}}}, got {s!r}. "
+                             f"Block names: {sorted(SUPPORTED)}")
+        args = s.get("args") or {}
+        if not isinstance(args, dict):
+            raise ValueError(f"stage {k} ({s['circuit']}): 'args' must be an object such as {{'bits': 4}}, got {args!r}")
         if s["circuit"] not in SUPPORTED:
-            raise ValueError(f"{s['circuit']} is not a digital-cascade block (supported: {sorted(SUPPORTED)})")
+            raise ValueError(f"stage {k}: {s['circuit']} is not a digital-cascade block (supported: {sorted(SUPPORTED)})")
+        specs.append((s["circuit"], args))
     chain = None
-    for k, s in enumerate(stages):
-        text = getattr(C, s["circuit"])(**s.get("args", {}))
+    warns: list[str] = []
+    for k, (name, args) in enumerate(specs):
+        try:
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                text = getattr(C, name)(**args)
+            warns += [f"{_PRETTY.get(name, name)} generator: {w.message}" for w in caught]
+        except TypeError as exc:
+            raise ValueError(f"stage {k + 1} ({name}): bad arguments: {exc}. Put every parameter inside "
+                             "'args', for example {'circuit': 'binary_counter', 'args': {'bits': 4}}") from None
+        except ValueError as exc:
+            raise ValueError(f"stage {k + 1} ({name}): {exc}") from None
         if k == 0:
-            chain = start(s["circuit"], text)
+            chain = start(name, text)
             if clock_hz and chain.blocks[0].clock is not None:
                 _set_clock(chain.netlist, chain.blocks[0].clock, clock_hz)
             continue
-        key = (chain.blocks[-1].name, s["circuit"])
-        if key not in LINKS:
-            allowed = sorted(b for a, b in LINKS if a == key[0])
-            raise ValueError(f"{key[0]} cannot drive {key[1]}; it can drive: {allowed or 'nothing'}")
-        chain = join(chain, s["circuit"], parse(text), LINKS[key])
+        down_nl = load_block(text)
+        last = chain.blocks[-1]
+        try:
+            kind = link_kind(last, ports_of(name, down_nl))
+            chain = join(chain, name, down_nl, kind)
+        except ValueError as exc:
+            partners = sorted(b_ for (a_, b_) in working_links() if a_ == last.name)
+            raise ValueError(f"stage {k + 1}: {last.name} cannot drive {name}: {exc}. {last.name} can drive: "
+                             f"{partners or 'nothing'}") from None
     checks: dict[str, list[str]] = {}
     first, last = chain.blocks[0], chain.blocks[-1]
     if len(chain.blocks) == 2 and first.name == "binary_counter" and last.in_pts:
         checks["counter code reaches the sink and counts"] = check_counter_to_bits(chain, len(first.out_bits))
     elif len(chain.blocks) == 2 and (first.name, last.name) == ("piso_shift_register", "sipo_shift_register"):
         checks["PISO word is rebuilt in the SIPO"] = check_serial_link(chain, len(last.out_bits))
+    link_checks, notes = check_links(chain)
+    checks.update(link_checks)
+    warns = warns + [f"Not exercised: {n}" for n in notes]
     note = DigitalNote(build_note(chain, checks))
-    note.reply = build_reply(chain, checks)
+    note.reply = build_reply(chain, checks, list(dict.fromkeys(warns)))
     return chain.netlist.to_text(), note

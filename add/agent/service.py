@@ -166,8 +166,8 @@ def execute_tool_call(name: str, arguments: dict, generated: list, canned: list 
             warnings.simplefilter("always")
             fn = INTERNAL.get(name) if from_memory else None     # remembered calls may use code-only switches
             result = (fn or available_functions[name])(**arguments)
-    except (ValueError, TypeError) as e:
-        return f"Error calling {name} with {arguments}: {e}"
+    except (ValueError, TypeError, KeyError) as e:
+        return f"Error calling {name} with {arguments}: {e!r}" if isinstance(e, KeyError) else f"Error calling {name} with {arguments}: {e}"
     warns = [str(w.message) for w in caught]
 
     # Tools may return text, (text, note) - the 555 generators and cascade -

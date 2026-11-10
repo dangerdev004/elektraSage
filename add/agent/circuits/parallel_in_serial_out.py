@@ -1,6 +1,15 @@
 from typing import List, Optional, Sequence, Union
 
 
+def _loadable(text: str) -> str:
+    """Rewrite the xml in the legacy format (the repo's CircuitJS cannot load xml - blank screen) and start the
+    load/shift toggle in LOAD mode (0 in this CircuitJS: the mux picks input 0 when its select is low)."""
+    from agent.cascade.digital_chain import load_block, _init_piso, ports_of
+    nl = load_block(text)
+    _init_piso("piso_shift_register", ports_of("piso_shift_register", nl))
+    return nl.to_text()
+
+
 def piso_shift_register(
     bits: int,
     initial_values: Optional[Union[str, Sequence[bool]]] = None,
@@ -22,8 +31,8 @@ def piso_shift_register(
             (I0) toggle, most-significant/first-stage bit first. Either a
             string of the same length as `bits` using '1'/'H'/'h' for
             high and '0'/'L'/'l' for low, or a sequence of `bits`
-            booleans/truthy values. Defaults to all-high (all True) when
-            omitted.
+            booleans/truthy values. Defaults to a mixed word (1,0,1,1,...) when
+            omitted, so a reversed bit order is visible.
 
     Returns:
         The Falstad circuit text, ready to load into circuitjs1.
@@ -40,7 +49,7 @@ def piso_shift_register(
 
     # ── Resolve per-bit initial toggle states ──────────────────────────
     if initial_values is None:
-        states: List[bool] = [True] * bits
+        states = [i != 1 for i in range(bits)]      # 1,0,1,1,...: a mixed word, so a reversed bit order shows
     elif isinstance(initial_values, str):
         if len(initial_values) != bits:
             raise ValueError(
@@ -135,7 +144,7 @@ def piso_shift_register(
 
     lines.append('</cir>')
 
-    return "\n".join(lines) + "\n"
+    return _loadable("\n".join(lines) + "\n")
 
 
 if __name__ == "__main__":

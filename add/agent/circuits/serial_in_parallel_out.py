@@ -1,5 +1,5 @@
 def sipo_shift_register(bits: int) -> str:
-    """Generate an N-bit SIPO (serial-in, parallel-out) shift register as Falstad circuit text.
+    """Generate an N-bit SIPO (serial-in, parallel-out) shift register as Falstad circuit text (legacy line format).
 
     Layout matches the 4-bit reference circuit (input/output text labels
     omitted): N D flip-flops chained Q -> D, one shared clock bus, a manual
@@ -76,7 +76,8 @@ def sipo_shift_register(bits: int) -> str:
 
     lines.append('</cir>')
 
-    return "\n".join(lines) + "\n"
+    from agent.cascade.digital_chain import load_block      # legacy format: the repo's CircuitJS cannot load xml
+    return load_block("\n".join(lines) + "\n").to_text()
 
 
 if __name__ == "__main__":

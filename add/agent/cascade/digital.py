@@ -8,7 +8,7 @@ clock edge. What is modelled (an ideal, zero-delay logic simulation):
   * `L` logic inputs (a fixed level), `M` logic outputs (observed), wires, ground;
   * D flip-flop (`155` / `DFlipFlop`): latches D into Q on the rising clock edge;
   * JK flip-flop (`156` / `JKFlipFlop`): falling-edge, J = K = 1 toggles (J/K read from the nets);
-  * 2:1 mux (`mux`): see MUX_ROWS - the pin order is taken from the generator's documented design;
+  * 2:1 mux (`184` / `mux`): pin order from this repo's MultiplexerElm.java (see MUX_ROWS);
   * inverter (`I`) and logic gates (150 AND, 151 NAND, 152 OR, 153 NOR, 154 XOR).
 
 Not modelled: propagation delay, glitches, set/reset pins, analog loading. A zero-delay model is therefore
@@ -28,13 +28,13 @@ ROW = 32
 EAST = 96
 GATES = {"150": "and", "151": "nand", "152": "or", "153": "nor", "154": "xor"}
 
-# Mux pin rows (west side). The PISO generator documents "I0 = parallel input toggle, I1 = previous Q" and
-# wires the toggle to row 1 and the previous Q to row 0, so row 1 is selected when S0 = 0, row 0 when S0 = 1.
-MUX_ROWS = {0: 1, 1: 0}
+# Mux pin rows (west side), from this repo's MultiplexerElm.java: I0 is row 0 (top), I1 row 1, and the select
+# value is the index of the selected input, so S0 = 0 picks row 0 and S0 = 1 picks row 1.
+MUX_ROWS = {0: 0, 1: 1}
 
 CHIPS_D = {"155", "DFlipFlop"}
 CHIPS_JK = {"156", "JKFlipFlop"}
-CHIPS_MUX = {"mux"}
+CHIPS_MUX = {"mux", "184"}
 
 
 def _is(e: Element, names) -> bool:
@@ -45,7 +45,7 @@ def chip_pins(e: Element) -> dict[str, Point] | None:
     """Named pin points of the chips this module understands (None for anything else)."""
     x, y = e.x1, e.y1
     if _is(e, CHIPS_D):
-        return {"d": (x, y), "clk": (x, y + ROW), "q": (x + EAST, y), "qn": (x + EAST, y + ROW)}
+        return {"d": (x, y), "clk": (x, y + ROW), "q": (x + EAST, y), "qn": (x + EAST, y + 2 * ROW)}
     if _is(e, CHIPS_JK):
         return {"j": (x, y), "clk": (x, y + ROW), "k": (x, y + 2 * ROW),
                 "q": (x + EAST, y), "qn": (x + EAST, y + 2 * ROW)}
@@ -185,7 +185,7 @@ class Sim:
                 if _is(e, CHIPS_MUX):
                     p = chip_pins(e)
                     s = val.get(self.net(p["s"]), 0)
-                    row = "r0" if s else "r1"
+                    row = "r1" if s else "r0"             # MUX_ROWS: S0 = 0 -> row 0, S0 = 1 -> row 1
                     new = (self.net(p["out"]), val.get(self.net(p[row]), 0))
                 elif e.type == "I":
                     new = (self.net(e.p2), 1 - val.get(self.net(e.p1), 0))

@@ -1191,8 +1191,9 @@ def _finish_docstring() -> None:
 def _finish_digital_docstring() -> None:
     from .digital_chain import working_links
     LINKS = working_links()
-    pairs = "\n      ".join(f"{a} -> {b}" + (" (serial bit)" if k == "serial" else " (bit bus)")
-                          for (a, b), k in sorted(LINKS.items()))
+    what = {"serial": " (one serial bit)", "carry": " (carry: the first counter's last bit clocks the second, "
+            "making one wider counter)", "bits": " (bit bus)"}
+    pairs = "\n      ".join(f"{a} -> {b}" + what[k] for (a, b), k in sorted(LINKS.items()))
     digital_cascade.__doc__ = f"""Cascade DIGITAL blocks (counter, shift registers, DACs, flash ADC) into ONE circuit.
 
     Use this, not `cascade`, when the user wants a counter, SIPO or PISO shift register, a DAC or a
@@ -1200,14 +1201,13 @@ def _finish_digital_docstring() -> None:
     the generators' own circuits and checks the result; you only choose the blocks and their
     parameters. Never invent values; ask for missing REQUIRED ones. The reply is written by code.
 
-    Allowed connections (the first block of a pair drives the second; every block takes its input
-    from the one before it):
+    Chains may be any length; every block takes its input from the one before it. Allowed connections
+    (the first block of a pair drives the second; the list is derived from the blocks' real ports):
       {pairs}
     Bit buses must have the same width on both sides (a counter's bits must equal the DAC's bits).
-    Only blocks in the same CircuitJS file format can be joined: the counter, DACs and ADC are one
-    format, the shift registers another, so a counter cannot yet drive a PISO or a shift register. If the pair is not
-    in the list, or the formats differ, tell the user it is not supported yet - never improvise a
-    substitute. The first block's own clock drives the chain (set `clock_hz` only if the user asks
+    Every block is delivered in the one file format this CircuitJS can load. If the pair is not
+    in the list, the reply names the reason (and, where one exists, the adapter block to insert, e.g. a PISO
+    between a counter and a SIPO); relay that, never improvise a substitute. The first block's own clock drives the chain (set `clock_hz` only if the user asks
     for a clock frequency). A flash ADC used here keeps its own test input (this is not the analog
     chain; to put analog stages before an ADC use `cascade`).
 
